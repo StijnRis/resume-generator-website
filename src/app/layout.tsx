@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { DebugProvider } from "@/lib/debug/context";
 import { DebugPanel } from "@/components/DebugPanel";
 import "./globals.css";
@@ -19,19 +20,19 @@ export default function RootLayout({
         <DebugProvider>
           <nav className="border-b border-zinc-200 bg-white">
             <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-              <a href="/" className="text-lg font-bold text-zinc-900">
+              <Link href="/" className="text-lg font-bold text-zinc-900">
                 CV Generator
-              </a>
+              </Link>
               <div className="flex gap-4 text-sm">
-                <a href="/" className="text-zinc-600 hover:text-zinc-900">
+                <Link href="/" className="text-zinc-600 hover:text-zinc-900">
                   Home
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/generate"
                   className="text-zinc-600 hover:text-zinc-900"
                 >
                   Generate
-                </a>
+                </Link>
               </div>
             </div>
           </nav>

@@ -93,14 +93,7 @@ export default function GeneratePage() {
         ? { linkedin: settings.linkedin, github: settings.github }
         : settings,
     );
-  }, [
-    biography,
-    settings.anonymousMode,
-    settings.email,
-    settings.phone,
-    settings.linkedin,
-    settings.github,
-  ]);
+  }, [biography, settings]);
 
   const canAnalyze =
     !!effectiveBiography && settings.jobDescription.trim().length > 0;

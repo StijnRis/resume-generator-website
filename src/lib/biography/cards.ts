@@ -102,7 +102,7 @@ export function extractAttributeCards(
     if (!Array.isArray(items)) continue;
 
     for (const item of items) {
-      const raw = item as Record<string, unknown>;
+      const raw = item as unknown as Record<string, unknown>;
       const dateField =
         category === "publications"
           ? raw.release_date
