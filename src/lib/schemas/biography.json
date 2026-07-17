@@ -1,0 +1,397 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Biography",
+  "type": "object",
+  "properties": {
+    "basics": { "$ref": "#/definitions/Basics" },
+    "label": { "type": "string" },
+    "summary": { "type": "string" },
+    "work": { "type": "array", "items": { "$ref": "#/definitions/WorkExperience" } },
+    "education": { "type": "array", "items": { "$ref": "#/definitions/EducationExperience" } },
+    "volunteer": { "type": "array", "items": { "$ref": "#/definitions/VolunteerExperience" } },
+    "experience": { "type": "array", "items": { "$ref": "#/definitions/GenericExperience" } },
+    "extracurriculars": { "type": "array", "items": { "$ref": "#/definitions/GenericExperience" } },
+    "events": { "type": "array", "items": { "$ref": "#/definitions/EventItem" } },
+    "research": { "type": "array", "items": { "$ref": "#/definitions/ResearchExperience" } },
+    "projects": { "type": "array", "items": { "$ref": "#/definitions/ProjectExperience" } },
+    "awards": { "type": "array", "items": { "$ref": "#/definitions/AwardItem" } },
+    "certificates": { "type": "array", "items": { "$ref": "#/definitions/CertificateItem" } },
+    "skills": { "type": "array", "items": { "$ref": "#/definitions/Skill" } },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" }
+        },
+        "required": ["name"],
+        "additionalProperties": true
+      }
+    },
+    "languages": { "type": "array", "items": { "$ref": "#/definitions/LanguageItem" } },
+    "sports": { "type": "array", "items": { "$ref": "#/definitions/SportItem" } },
+    "interests": { "type": "array", "items": { "type": "string" } },
+    "publications": { "type": "array", "items": { "$ref": "#/definitions/PublicationItem" } },
+    "references": { "type": "array", "items": { "$ref": "#/definitions/ReferenceItem" } },
+    "star_stories": { "type": "array", "items": { "$ref": "#/definitions/StarStory" } },
+    "competenties": { "$ref": "#/definitions/Competenties" }
+  },
+  "required": ["basics", "label", "summary"],
+  "additionalProperties": false,
+  "definitions": {
+    "Contact": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "relation": { "type": "string" },
+        "linkedin": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "Profile": {
+      "type": "object",
+      "properties": {
+        "network": { "type": "string" },
+        "username": { "type": "string" },
+        "url": { "type": "string" }
+      },
+      "required": ["network", "username", "url"],
+      "additionalProperties": false
+    },
+    "Location": {
+      "type": "object",
+      "properties": {
+        "city": { "type": "string" },
+        "region": { "type": "string" },
+        "country": { "type": "string" },
+        "country_code": { "type": "string" }
+      },
+      "required": ["region", "country", "country_code"],
+      "additionalProperties": false
+    },
+    "Basics": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "image": { "type": "string" },
+        "phone": { "type": "string" },
+        "location": { "$ref": "#/definitions/Location" },
+        "profiles": { "type": "array", "items": { "$ref": "#/definitions/Profile" } }
+      },
+      "required": ["name", "location", "profiles"],
+      "additionalProperties": false
+    },
+    "WorkPosition": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": "string" },
+        "highlights": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "WorkExperience": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "organization": { "type": "string" },
+        "position": { "type": "string" },
+        "hours_per_week": { "type": ["integer", "null"] },
+        "start_date": { "type": "string" },
+        "end_date": { "type": ["string", "null"] },
+        "location": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "highlights": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } },
+        "positions": { "type": "array", "items": { "$ref": "#/definitions/WorkPosition" } }
+      },
+      "required": ["organization", "position", "start_date"],
+      "additionalProperties": false
+    },
+    "Course": {
+      "type": "object",
+      "properties": {
+        "course_name": { "type": "string" },
+        "course_code": { "type": "string" },
+        "start_date": { "type": ["string", "null"] },
+        "end_date": { "type": ["string", "null"] },
+        "credits_ec": { "type": "number" },
+        "grade": { "type": ["number", "null"] },
+        "grade_scale": { "type": ["number", "null"] },
+        "passed": { "type": ["boolean", "null"] },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "highlights": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["course_name", "course_code", "credits_ec"],
+      "additionalProperties": false
+    },
+    "EducationExperience": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "organization": { "type": "string" },
+        "area": { "type": "string" },
+        "degree": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": ["string", "null"] },
+        "location": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "highlights": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "grade": { "type": ["number", "null"] },
+        "grade_scale": { "type": ["number", "null"] },
+        "courses": {
+          "type": "array",
+          "items": {
+            "anyOf": [{ "$ref": "#/definitions/Course" }, { "type": "string" }]
+          }
+        }
+      },
+      "required": ["organization", "area", "degree", "start_date"],
+      "additionalProperties": false
+    },
+    "VolunteerExperience": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "organization": { "type": "string" },
+        "role": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": ["string", "null"] },
+        "location": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "highlights": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } }
+      },
+      "required": ["organization", "role"],
+      "additionalProperties": false
+    },
+    "GenericExperience": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "organization": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": ["string", "null"] },
+        "location": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "highlights": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } }
+      },
+      "required": ["title", "organization"],
+      "additionalProperties": false
+    },
+    "ResearchExperience": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "organization": { "type": "string" },
+        "reference": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": ["string", "null"] },
+        "location": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "highlights": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } }
+      },
+      "required": ["title"],
+      "additionalProperties": false
+    },
+    "ProjectSTAR": {
+      "type": "object",
+      "properties": {
+        "situation": { "type": "string" },
+        "task": { "type": "string" },
+        "action": { "type": "string" },
+        "result": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "ProjectExperience": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": ["string", "null"] },
+        "location": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "highlights": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "roles": { "type": "array", "items": { "type": "string" } },
+        "type": { "type": ["string", "null"] },
+        "STAR": { "type": "array", "items": { "$ref": "#/definitions/ProjectSTAR" } }
+      },
+      "required": ["title"],
+      "additionalProperties": false
+    },
+    "EventItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "organization": { "type": "string" },
+        "type": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": ["string", "null"] },
+        "location": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "highlights": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "urls": { "type": "array", "items": { "type": "string" } },
+        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } }
+      },
+      "required": ["title", "organization", "start_date"],
+      "additionalProperties": false
+    },
+    "Skill": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "level": { "type": "string" },
+        "keywords": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "CertificateItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "issuer": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "AwardItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "awarder": { "type": "string" },
+        "date": { "type": "string" },
+        "highlights": { "type": "array", "items": { "type": "string" } },
+        "summary": { "type": ["string", "null"] }
+      },
+      "required": ["title"],
+      "additionalProperties": false
+    },
+    "PublicationItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "publisher": { "type": "string" },
+        "release_date": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "ReferenceItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "reference": { "type": "string" },
+        "position": { "type": ["string", "null"] },
+        "contact": { "type": ["string", "null"] }
+      },
+      "required": ["name", "reference"],
+      "additionalProperties": false
+    },
+    "LanguageItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "language": { "type": "string" },
+        "fluency": {
+          "type": "string",
+          "enum": ["native", "fluent", "intermediate", "basic"]
+        }
+      },
+      "required": ["language", "fluency"],
+      "additionalProperties": false
+    },
+    "SportItem": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "location": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": "string" },
+        "highlights": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["title"],
+      "additionalProperties": false
+    },
+    "StarStory": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "competencies": { "type": "array", "items": { "type": "string" } },
+        "situation": { "type": "string" },
+        "task": { "type": "string" },
+        "action": { "type": "string" },
+        "result": { "type": "string" }
+      },
+      "required": ["date", "competencies", "situation", "task", "action", "result"],
+      "additionalProperties": false
+    },
+    "CompetencyItem": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "examples": { "type": "array", "items": { "type": "string" } },
+        "action_plan": { "type": "string" }
+      },
+      "required": ["name", "description"],
+      "additionalProperties": false
+    },
+    "Competenties": {
+      "type": "object",
+      "properties": {
+        "strenghts": { "type": "array", "items": { "$ref": "#/definitions/CompetencyItem" } },
+        "growth_areas": { "type": "array", "items": { "$ref": "#/definitions/CompetencyItem" } }
+      },
+      "required": ["strenghts", "growth_areas"],
+      "additionalProperties": false
+    }
+  }
+}

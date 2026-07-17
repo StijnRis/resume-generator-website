@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HighLevelAnalysis",
+  "type": "object",
+  "properties": {
+    "category_analysis": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/CategoryAnalysisItem" }
+    },
+    "experience_analysis": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ExperienceAnalysisItem" }
+    },
+    "attribute_analysis": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/AttributeAnalysisItem" }
+    }
+  },
+  "required": ["category_analysis", "experience_analysis", "attribute_analysis"],
+  "additionalProperties": false,
+  "definitions": {
+    "CategoryAnalysisItem": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "work",
+            "education",
+            "volunteer",
+            "extracurriculars",
+            "events",
+            "research",
+            "projects",
+            "skills",
+            "tools",
+            "interests",
+            "certificates",
+            "awards",
+            "publications",
+            "references",
+            "languages"
+          ]
+        },
+        "relevance_score": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "reason": { "type": "string" }
+      },
+      "required": ["category", "relevance_score", "reason"],
+      "additionalProperties": false
+    },
+    "ExperienceAnalysisItem": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "work",
+            "education",
+            "volunteer",
+            "extracurriculars",
+            "events",
+            "research",
+            "projects"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "description": "Deterministic ID matching the biography item"
+        },
+        "relevance_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "reason": { "type": "string" },
+        "suggested_bullet_points": { "type": "integer", "minimum": 0, "maximum": 5 }
+      },
+      "required": ["category", "id", "relevance_score", "reason", "suggested_bullet_points"],
+      "additionalProperties": false
+    },
+    "AttributeAnalysisItem": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "skills",
+            "tools",
+            "interests",
+            "certificates",
+            "awards",
+            "publications",
+            "references",
+            "languages"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "description": "Deterministic ID matching the biography item"
+        },
+        "relevance_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "reason": { "type": "string" }
+      },
+      "required": ["category", "id", "relevance_score", "reason"],
+      "additionalProperties": false
+    }
+  }
+}

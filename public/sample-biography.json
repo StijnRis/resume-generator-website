@@ -1,0 +1,126 @@
+{
+  "basics": {
+    "name": "Jane Smith",
+    "email": "jane.smith@email.com",
+    "image": "",
+    "phone": "+31 6 12345678",
+    "location": {
+      "city": "Amsterdam",
+      "region": "North Holland",
+      "country": "Netherlands",
+      "country_code": "NL"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "janesmith",
+        "url": "https://linkedin.com/in/janesmith"
+      },
+      {
+        "network": "GitHub",
+        "username": "janesmith",
+        "url": "https://github.com/janesmith"
+      }
+    ]
+  },
+  "label": "Software Engineer",
+  "summary": "Full-stack developer with 5 years of experience building web applications with React, Node.js, and cloud infrastructure.",
+  "work": [
+    {
+      "organization": "TechCorp",
+      "position": "Senior Software Engineer",
+      "title": "Platform Team Lead",
+      "start_date": "2022-03",
+      "end_date": null,
+      "location": "Amsterdam, Netherlands",
+      "url": "https://techcorp.example.com",
+      "summary": "Leading the platform team responsible for core infrastructure.",
+      "highlights": [
+        "Reduced deployment time by 60% through CI/CD pipeline optimization",
+        "Mentored 4 junior developers",
+        "Architected microservices migration serving 2M daily users"
+      ],
+      "skills": ["React", "Node.js", "AWS", "Docker", "Kubernetes"]
+    },
+    {
+      "organization": "StartupXYZ",
+      "position": "Full-Stack Developer",
+      "title": "Product Engineer",
+      "start_date": "2019-06",
+      "end_date": "2022-02",
+      "location": "Rotterdam, Netherlands",
+      "url": null,
+      "summary": "Built the core product from MVP to Series A.",
+      "highlights": [
+        "Developed real-time dashboard used by 500+ enterprise clients",
+        "Implemented payment integration with Stripe",
+        "Built automated testing suite achieving 90% code coverage"
+      ],
+      "skills": ["TypeScript", "PostgreSQL", "Redis", "GraphQL"]
+    }
+  ],
+  "education": [
+    {
+      "organization": "Delft University of Technology",
+      "area": "Computer Science",
+      "degree": "M.Sc.",
+      "title": "Master of Science in Computer Science",
+      "start_date": "2017-09",
+      "end_date": "2019-06",
+      "location": "Delft, Netherlands",
+      "grade": 8.2,
+      "grade_scale": 10,
+      "courses": [
+        {
+          "course_name": "Advanced Algorithms",
+          "course_code": "CS4120",
+          "credits_ec": 6,
+          "grade": 9,
+          "grade_scale": 10,
+          "passed": true
+        }
+      ],
+      "highlights": ["Thesis on distributed systems optimization"],
+      "skills": []
+    }
+  ],
+  "skills": [
+    { "name": "JavaScript/TypeScript", "level": "Expert", "keywords": ["React", "Node.js", "Next.js"] },
+    { "name": "Cloud & DevOps", "level": "Advanced", "keywords": ["AWS", "Docker", "Kubernetes", "CI/CD"] },
+    { "name": "Databases", "level": "Advanced", "keywords": ["PostgreSQL", "Redis", "MongoDB"] }
+  ],
+  "languages": [
+    { "language": "English", "fluency": "fluent" },
+    { "language": "Dutch", "fluency": "native" }
+  ],
+  "projects": [
+    {
+      "title": "Open Source CLI Tool",
+      "start_date": "2023-01",
+      "end_date": null,
+      "location": "Remote",
+      "roles": ["Creator", "Maintainer"],
+      "type": "Open Source",
+      "summary": "Developer productivity CLI with 2k+ GitHub stars.",
+      "highlights": ["Built in Rust for performance", "Active community of 50+ contributors"],
+      "skills": ["Rust", "CLI"]
+    }
+  ],
+  "certificates": [
+    {
+      "name": "AWS Solutions Architect",
+      "date": "2023-06",
+      "issuer": "Amazon Web Services",
+      "url": null,
+      "summary": null
+    }
+  ],
+  "interests": ["Open source", "Machine learning", "Rock climbing"],
+  "volunteer": [],
+  "extracurriculars": [],
+  "events": [],
+  "research": [],
+  "awards": [],
+  "publications": [],
+  "references": []
+}

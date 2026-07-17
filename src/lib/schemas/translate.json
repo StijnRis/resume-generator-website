@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TranslateResponse",
+  "type": "object",
+  "properties": {
+    "translations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "original": { "type": "string" },
+          "translated": { "type": "string" }
+        },
+        "required": ["original", "translated"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["translations"],
+  "additionalProperties": false
+}
