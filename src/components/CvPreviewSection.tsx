@@ -129,11 +129,7 @@ export function CvPreviewSection({
         .trim()
         .replace(/\s+/g, "_")
         .replace(/[^\w\-]+/g, "");
-      await downloadCvPdf(
-        element,
-        `resume_${safeName || "resume"}.pdf`,
-        pageCount,
-      );
+      await downloadCvPdf(element, `resume_${safeName || "resume"}.pdf`);
     } catch (error) {
       console.error("[CvPreviewSection] PDF download failed:", error);
     } finally {
