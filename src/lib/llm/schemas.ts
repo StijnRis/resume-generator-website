@@ -125,28 +125,6 @@ export const biographyMappingResponseSchema = {
   additionalProperties: { type: "string" },
 } as const;
 
-export const experienceTextResponseSchema = {
-  type: "object",
-  properties: {
-    summary: { type: "string" },
-    bullet_points: {
-      type: "array",
-      items: { type: "string" },
-    },
-  },
-  required: ["summary", "bullet_points"],
-  additionalProperties: false,
-} as const;
-
-export const summaryResponseSchema = {
-  type: "object",
-  properties: {
-    summary: { type: "string" },
-  },
-  required: ["summary"],
-  additionalProperties: false,
-} as const;
-
 export const batchedCvTextResponseSchema = {
   type: "object",
   properties: {
