@@ -7,7 +7,9 @@ import { validateWithSchema } from "@/lib/validation";
 import type { Biography } from "@/lib/types";
 import type { ValidationErrorItem } from "@/lib/validation-errors";
 
-function getExperienceDateWarnings(biography: Biography): ValidationErrorItem[] {
+function getExperienceDateWarnings(
+  biography: Biography,
+): ValidationErrorItem[] {
   const warnings: ValidationErrorItem[] = [];
   const items = getExperiences(biography);
 
@@ -60,9 +62,12 @@ export function prepareBiographyFromUpload(
 export function getBiographyValidationErrorItems(data: unknown) {
   const result = validateWithSchema<Biography>("biography", data);
   const schemaErrors = result.valid ? [] : (result.errorItems ?? []);
-  if (!isRecognizedBiographyShape(data)) return schemaErrors.length ? schemaErrors : null;
+  if (!isRecognizedBiographyShape(data))
+    return schemaErrors.length ? schemaErrors : null;
 
-  const dateWarnings = getExperienceDateWarnings(normalizeUploadedBiography(data));
+  const dateWarnings = getExperienceDateWarnings(
+    normalizeUploadedBiography(data),
+  );
   const combined = [...schemaErrors, ...dateWarnings];
   return combined.length ? combined : null;
 }

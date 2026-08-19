@@ -9,7 +9,9 @@ type RawRecord = Record<string, unknown>;
 
 function asArray(value: unknown): RawRecord[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((item) => item && typeof item === "object") as RawRecord[];
+  return value.filter(
+    (item) => item && typeof item === "object",
+  ) as RawRecord[];
 }
 
 function str(value: unknown, fallback = ""): string {
@@ -46,7 +48,8 @@ function normalizeExperienceFields(
       : [],
     skills: Array.isArray(item.skills) ? item.skills.map(String) : [],
     tools: Array.isArray(item.tools) ? item.tools.map(String) : [],
-    organization: item.organization != null ? str(item.organization) : undefined,
+    organization:
+      item.organization != null ? str(item.organization) : undefined,
     position: item.position != null ? str(item.position) : undefined,
     role: item.role != null ? str(item.role) : undefined,
     degree: item.degree != null ? str(item.degree) : undefined,
@@ -157,10 +160,10 @@ export function isRecognizedBiographyShape(data: unknown): boolean {
   const basics = obj.basics as RawRecord | undefined;
   return Boolean(
     basics &&
-      typeof basics === "object" &&
-      typeof basics.name === "string" &&
-      typeof obj.label === "string" &&
-      typeof obj.summary === "string",
+    typeof basics === "object" &&
+    typeof basics.name === "string" &&
+    typeof obj.label === "string" &&
+    typeof obj.summary === "string",
   );
 }
 

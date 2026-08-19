@@ -40,7 +40,12 @@ import {
   groupAttributeAnalysis,
   groupExperienceAnalysis,
 } from "@/lib/biography/lookup";
-import { formatDate, formatDateRange, formatMergedDateRange, parseDateForSort } from "@/lib/formatting/dates";
+import {
+  formatDate,
+  formatDateRange,
+  formatMergedDateRange,
+  parseDateForSort,
+} from "@/lib/formatting/dates";
 import type {
   AttributeAnalysisItem,
   Biography,
@@ -232,7 +237,8 @@ function sortAttributeItems(
   items: AttributeAnalysisItem[],
 ): AttributeAnalysisItem[] {
   return [...items].sort((a, b) => {
-    const skillLike = /skill|tool/i.test(a.category) || /skill|tool/i.test(b.category);
+    const skillLike =
+      /skill|tool/i.test(a.category) || /skill|tool/i.test(b.category);
     if (skillLike && b.relevance_score !== a.relevance_score) {
       return b.relevance_score - a.relevance_score;
     }
@@ -738,7 +744,10 @@ export function AnalysisSection({
     if (!analysis) return [];
     return getExperienceCategoryDefs(analysis)
       .filter((def) => (experienceGroups?.get(def.id)?.length ?? 0) > 0)
-      .sort((a, b) => getCategoryOrder(analysis, a.id) - getCategoryOrder(analysis, b.id))
+      .sort(
+        (a, b) =>
+          getCategoryOrder(analysis, a.id) - getCategoryOrder(analysis, b.id),
+      )
       .map((def) => def.id);
   }, [analysis, experienceGroups]);
 
@@ -746,7 +755,10 @@ export function AnalysisSection({
     if (!analysis) return [];
     return getAttributeCategoryDefs(analysis)
       .filter((def) => (attributeGroups?.get(def.id)?.length ?? 0) > 0)
-      .sort((a, b) => getCategoryOrder(analysis, a.id) - getCategoryOrder(analysis, b.id))
+      .sort(
+        (a, b) =>
+          getCategoryOrder(analysis, a.id) - getCategoryOrder(analysis, b.id),
+      )
       .map((def) => def.id);
   }, [analysis, attributeGroups]);
 
@@ -980,7 +992,10 @@ export function AnalysisSection({
                         : "border-zinc-100 bg-zinc-50 opacity-70"
                     }`}
                   >
-                    <div className="mb-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="mb-2 space-y-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <input
                         key={`${cat}:${getCategoryLabel(analysis, cat)}`}
                         defaultValue={getCategoryLabel(analysis, cat)}
@@ -1020,7 +1035,12 @@ export function AnalysisSection({
                             }
                             className="rounded-full border border-violet-200 bg-violet-100 px-2 py-0.5 text-[10px] text-violet-800 hover:bg-violet-200"
                           >
-                            Combine {getSuggestedMergeLabel(biography, analysis, memberIds)}
+                            Combine{" "}
+                            {getSuggestedMergeLabel(
+                              biography,
+                              analysis,
+                              memberIds,
+                            )}
                           </button>
                         ))}
                       </div>
@@ -1069,7 +1089,10 @@ export function AnalysisSection({
                             ),
                           }))
                           .filter((entry) => entry.data != null);
-                        const bullets = normalizeBullets(group.bullets, group.id);
+                        const bullets = normalizeBullets(
+                          group.bullets,
+                          group.id,
+                        );
                         const generatedBullets =
                           generatedTexts?.experiences[group.id]?.bullets;
                         const totalIncluded = bullets.filter(
@@ -1190,7 +1213,9 @@ export function AnalysisSection({
                                       onClick={() => toggleRaw(rawKey)}
                                       className="text-sm text-blue-600 hover:underline"
                                     >
-                                      {expandedRaw.has(rawKey) ? "Hide" : "Show"}{" "}
+                                      {expandedRaw.has(rawKey)
+                                        ? "Hide"
+                                        : "Show"}{" "}
                                       raw data
                                     </button>
                                     {expandedRaw.has(rawKey) &&
@@ -1241,9 +1266,7 @@ export function AnalysisSection({
                                                     member.id,
                                                   );
                                                 return source?.end_date as
-                                                  | string
-                                                  | null
-                                                  | undefined;
+                                                  string | null | undefined;
                                               }),
                                             ),
                                         }}
@@ -1305,9 +1328,7 @@ export function AnalysisSection({
                                       ))}
                                       <button
                                         type="button"
-                                        onClick={() =>
-                                          addGroupBullet(group.id)
-                                        }
+                                        onClick={() => addGroupBullet(group.id)}
                                         className="text-xs text-blue-600 hover:underline"
                                       >
                                         + Add bullet
@@ -1412,7 +1433,9 @@ export function AnalysisSection({
                                       onClick={() => toggleRaw(rawKey)}
                                       className="text-sm text-blue-600 hover:underline"
                                     >
-                                      {expandedRaw.has(rawKey) ? "Hide" : "Show"}{" "}
+                                      {expandedRaw.has(rawKey)
+                                        ? "Hide"
+                                        : "Show"}{" "}
                                       raw data
                                     </button>
                                     {expandedRaw.has(rawKey) &&
@@ -1766,10 +1789,7 @@ export function AnalysisSection({
                             item.id
                           ] ?? name;
                         const rawKey = `attr-raw-${item.id}`;
-                        const dateMeta = getAttributeDateMeta(
-                          biography,
-                          item,
-                        );
+                        const dateMeta = getAttributeDateMeta(biography, item);
                         const selected = selectedAttributes.has(item.id);
 
                         return (
@@ -1834,15 +1854,14 @@ export function AnalysisSection({
                                   {expandedRaw.has(rawKey) ? "Hide" : "Show"}{" "}
                                   raw data
                                 </button>
-                                {expandedRaw.has(rawKey) &&
-                                  source != null && (
-                                    <pre
-                                      className="mt-1 text-xs bg-zinc-900 text-zinc-300 rounded p-2 overflow-x-auto max-h-24"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {JSON.stringify(source, null, 2)}
-                                    </pre>
-                                  )}
+                                {expandedRaw.has(rawKey) && source != null && (
+                                  <pre
+                                    className="mt-1 text-xs bg-zinc-900 text-zinc-300 rounded p-2 overflow-x-auto max-h-24"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {JSON.stringify(source, null, 2)}
+                                  </pre>
+                                )}
                               </div>
                               <div
                                 className="w-40 shrink-0"

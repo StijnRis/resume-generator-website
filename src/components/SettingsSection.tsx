@@ -48,9 +48,9 @@ export function SettingsSection({
   const debug = useDebug();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formatErrors, setFormatErrors] = useState<ValidationErrorItem[] | null>(
-    null,
-  );
+  const [formatErrors, setFormatErrors] = useState<
+    ValidationErrorItem[] | null
+  >(null);
   const [biographyOpen, setBiographyOpen] = useState(false);
 
   const handleFileUpload = useCallback(
@@ -152,8 +152,7 @@ export function SettingsSection({
               const next = jobDescription.trim();
               // Only auto-detect when the JD first becomes substantial, so a
               // manual language override is not wiped on every keystroke.
-              const shouldDetect =
-                previous.length < 20 && next.length >= 20;
+              const shouldDetect = previous.length < 20 && next.length >= 20;
               onChange({
                 ...settings,
                 jobDescription,
@@ -186,7 +185,9 @@ export function SettingsSection({
                   {entry.label}
                 </option>
               ))}
-              {!CV_LANGUAGES.some((entry) => entry.code === settings.language) && (
+              {!CV_LANGUAGES.some(
+                (entry) => entry.code === settings.language,
+              ) && (
                 <option value={settings.language}>
                   {languageLabel(settings.language)}
                 </option>
@@ -235,7 +236,9 @@ export function SettingsSection({
                 onClick={() => setBiographyOpen((open) => !open)}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
               >
-                {biographyOpen ? "Hide parsed biography" : "Show parsed biography"}
+                {biographyOpen
+                  ? "Hide parsed biography"
+                  : "Show parsed biography"}
               </button>
             )}
             {biography && !biographyOpen && (

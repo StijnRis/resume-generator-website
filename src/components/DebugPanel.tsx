@@ -6,7 +6,11 @@ import { useDebug } from "@/lib/debug/context";
 
 /** Strip fields already shown elsewhere; prefer raw LLM analysis when present. */
 function sanitizeDebugResponse(response: unknown): unknown {
-  if (response == null || typeof response !== "object" || Array.isArray(response)) {
+  if (
+    response == null ||
+    typeof response !== "object" ||
+    Array.isArray(response)
+  ) {
     return response;
   }
 
@@ -156,9 +160,7 @@ export function DebugPanel() {
                     <button
                       type="button"
                       className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-zinc-750"
-                      onClick={() =>
-                        setExpandedId(isExpanded ? null : log.id)
-                      }
+                      onClick={() => setExpandedId(isExpanded ? null : log.id)}
                     >
                       <span className="text-zinc-300 truncate flex items-center gap-2">
                         {isPending && (
@@ -184,7 +186,9 @@ export function DebugPanel() {
                                   className="text-zinc-300 flex gap-2"
                                 >
                                   <span className="text-zinc-500 shrink-0">
-                                    {new Date(event.timestamp).toLocaleTimeString()}
+                                    {new Date(
+                                      event.timestamp,
+                                    ).toLocaleTimeString()}
                                   </span>
                                   <span>{event.message}</span>
                                 </li>

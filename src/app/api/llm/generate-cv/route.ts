@@ -28,12 +28,12 @@ import {
   getExperienceItemById,
   getExperienceOrganization,
 } from "@/lib/biography/lookup";
-import { formatMergedDateRange, isOngoingExperience } from "@/lib/formatting/dates";
-import { formatLocationString } from "@/lib/formatting/location";
 import {
-  getSharedLocation,
-  getSharedOrganization,
-} from "@/lib/cv/merged-meta";
+  formatMergedDateRange,
+  isOngoingExperience,
+} from "@/lib/formatting/dates";
+import { formatLocationString } from "@/lib/formatting/location";
+import { getSharedLocation, getSharedOrganization } from "@/lib/cv/merged-meta";
 import { languageLabel } from "@/lib/language";
 import { callLlm, extractJsonFromResponse } from "@/lib/llm/server";
 import { BATCH_CV_GENERATION_PROMPT } from "@/lib/llm/prompts";
@@ -111,13 +111,12 @@ export async function POST(request: Request) {
             )
               ? "present"
               : "past",
-            organization_shared: getExperienceOrganization(
-              experienceData,
-              unit.item.category,
-            ) || null,
-            location_shared: formatLocationString(
-              String(experienceData.location ?? ""),
-            ) || null,
+            organization_shared:
+              getExperienceOrganization(experienceData, unit.item.category) ||
+              null,
+            location_shared:
+              formatLocationString(String(experienceData.location ?? "")) ||
+              null,
             data: experienceData,
           };
         }
@@ -150,11 +149,7 @@ export async function POST(request: Request) {
           formatLocationString(String(data.location ?? "")),
         );
         const organizations = unit.items.map((item) => {
-          const data = getExperienceItemById(
-            biography,
-            item.category,
-            item.id,
-          );
+          const data = getExperienceItemById(biography, item.category, item.id);
           return getExperienceOrganization(data, item.category);
         });
 
@@ -177,7 +172,8 @@ export async function POST(request: Request) {
           date_range: formatMergedDateRange(starts, ends),
           organization_shared: sharedOrganization,
           location_shared: sharedLocation,
-          location_needs_generic: sharedLocation == null && locations.some(Boolean),
+          location_needs_generic:
+            sharedLocation == null && locations.some(Boolean),
           member_locations: [...new Set(locations.filter(Boolean))],
           data: mergedData,
         };
@@ -236,7 +232,8 @@ export async function POST(request: Request) {
       if (existing) {
         existing.member_ids.push(unit.item.id);
         for (const label of labels) {
-          if (label && !existing.items.includes(label)) existing.items.push(label);
+          if (label && !existing.items.includes(label))
+            existing.items.push(label);
         }
       } else {
         attributesByCategory.set(bucketId, {
@@ -306,7 +303,9 @@ export async function POST(request: Request) {
     const allowedBulletIdsByUnit = new Map(
       units.map((unit) => [
         getUnitCvId(unit),
-        new Set(rankBulletsForFit(getUnitBullets(unit)).map((bullet) => bullet.id)),
+        new Set(
+          rankBulletsForFit(getUnitBullets(unit)).map((bullet) => bullet.id),
+        ),
       ]),
     );
 

@@ -2,7 +2,11 @@ import {
   getAttributeDisplayName,
   getExperienceDisplayName,
 } from "@/lib/biography/lookup";
-import { formatDate, formatDateRange, parseDateForSort } from "@/lib/formatting/dates";
+import {
+  formatDate,
+  formatDateRange,
+  parseDateForSort,
+} from "@/lib/formatting/dates";
 import { formatLocationString } from "@/lib/formatting/location";
 import type { Biography } from "@/lib/types";
 import { sourceTypeLabel } from "@/lib/types";

@@ -31,9 +31,9 @@ export function BiographySection({
   const debug = useDebug();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formatErrors, setFormatErrors] = useState<ValidationErrorItem[] | null>(
-    null,
-  );
+  const [formatErrors, setFormatErrors] = useState<
+    ValidationErrorItem[] | null
+  >(null);
 
   const handleFileUpload = useCallback(
     async (file: File) => {

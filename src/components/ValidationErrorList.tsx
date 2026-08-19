@@ -16,8 +16,7 @@ export function ValidationErrorList({
       ? "bg-red-50 border-red-200 text-red-800"
       : "bg-amber-50 border-amber-200 text-amber-800";
 
-  const codeStyles =
-    variant === "error" ? "bg-red-100" : "bg-amber-100";
+  const codeStyles = variant === "error" ? "bg-red-100" : "bg-amber-100";
 
   return (
     <div className={`rounded-lg border px-4 py-3 text-sm ${styles}`}>

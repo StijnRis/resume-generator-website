@@ -19,28 +19,55 @@ import type {
 
 export type CvExperienceUnit =
   | { type: "single"; item: ExperienceAnalysisItem }
-  | { type: "merged"; group: ExperienceMergeGroup; items: ExperienceAnalysisItem[] };
+  | {
+      type: "merged";
+      group: ExperienceMergeGroup;
+      items: ExperienceAnalysisItem[];
+    };
 
 function normalizeMergeKey(value: string): string {
   return value.toLowerCase().trim().replace(/\s+/g, " ");
 }
 
 const EVENT_FAMILY_PATTERNS: { family: string; pattern: RegExp }[] = [
-  { family: "hackathon", pattern: /\bhackathons?\b|\bcode\s*jam\b|\bhack\s*night\b|\bjunction\b|\bhack[\s-]?the\b/i },
-  { family: "conference", pattern: /\bconferences?\b|\bsummit\b|\bmeetup\b|\bnetworking\b/i },
-  { family: "competition", pattern: /\bcompetitions?\b|\bcontest\b|\bchallenge\b|\bolympiads?\b|\bctf\b/i },
+  {
+    family: "hackathon",
+    pattern:
+      /\bhackathons?\b|\bcode\s*jam\b|\bhack\s*night\b|\bjunction\b|\bhack[\s-]?the\b/i,
+  },
+  {
+    family: "conference",
+    pattern: /\bconferences?\b|\bsummit\b|\bmeetup\b|\bnetworking\b/i,
+  },
+  {
+    family: "competition",
+    pattern:
+      /\bcompetitions?\b|\bcontest\b|\bchallenge\b|\bolympiads?\b|\bctf\b/i,
+  },
   { family: "workshop", pattern: /\bworkshops?\b|\btraining\b|\bbootcamp\b/i },
-  { family: "running", pattern: /\brun(ning)?\b|\bmarathon\b|\b5k\b|\b10k\b|\brace\b/i },
+  {
+    family: "running",
+    pattern: /\brun(ning)?\b|\bmarathon\b|\b5k\b|\b10k\b|\brace\b/i,
+  },
   { family: "mun", pattern: /\bmodel\s*united\b|\bmodel\s*un\b|\bmun\b/i },
   { family: "shadow", pattern: /\bshadow\b/i },
 ];
 
 const ROLE_FAMILY_PATTERNS: { family: string; pattern: RegExp }[] = [
   { family: "intern", pattern: /\bintern(ship)?\b|\bstagiair\b/i },
-  { family: "student-assistant", pattern: /\bstudent\s*assistant\b|\bteaching\s*assistant\b|\bta\b|\btutor/i },
+  {
+    family: "student-assistant",
+    pattern: /\bstudent\s*assistant\b|\bteaching\s*assistant\b|\bta\b|\btutor/i,
+  },
   { family: "mentor", pattern: /\bmentor(ship)?\b|\bonboard/i },
-  { family: "teacher", pattern: /\bteacher\b|\btaught\b|\bworkshop\b|\bfacilitat/i },
-  { family: "software-engineer", pattern: /\bsoftware\s*engineer\b|\bdeveloper\b|\bprogrammer\b/i },
+  {
+    family: "teacher",
+    pattern: /\bteacher\b|\btaught\b|\bworkshop\b|\bfacilitat/i,
+  },
+  {
+    family: "software-engineer",
+    pattern: /\bsoftware\s*engineer\b|\bdeveloper\b|\bprogrammer\b/i,
+  },
   { family: "research", pattern: /\bresearch(er)?\b|\blab\s*assistant\b/i },
 ];
 
@@ -346,9 +373,7 @@ export function getUnitBullets(
   if (unit.group.bullets != null) {
     return normalizeBullets(unit.group.bullets, unit.group.id);
   }
-  return unit.items.flatMap((item) =>
-    normalizeBullets(item.bullets, item.id),
-  );
+  return unit.items.flatMap((item) => normalizeBullets(item.bullets, item.id));
 }
 
 export function isUnitIncluded(unit: CvExperienceUnit): boolean {

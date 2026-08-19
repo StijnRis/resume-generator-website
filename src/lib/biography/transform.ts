@@ -18,7 +18,11 @@ function getValueAtPath(obj: unknown, path: string): unknown {
   return current;
 }
 
-function setValueAtPath(obj: Record<string, unknown>, path: string, value: unknown): void {
+function setValueAtPath(
+  obj: Record<string, unknown>,
+  path: string,
+  value: unknown,
+): void {
   const parts = path.split(".");
   let current: Record<string, unknown> | unknown[] = obj;
 

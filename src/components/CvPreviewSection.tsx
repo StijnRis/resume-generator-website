@@ -4,10 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CvTemplate } from "@/components/CvTemplate";
 import { buildFinalCv, buildPlaceholderCv } from "@/lib/cv/assemble";
-import {
-  CV_PAGE_HEIGHT_MM,
-  CV_PAGE_WIDTH_MM,
-} from "@/lib/cv/page-geometry";
+import { CV_PAGE_HEIGHT_MM, CV_PAGE_WIDTH_MM } from "@/lib/cv/page-geometry";
 import { getMmToPx } from "@/lib/cv/measure-fit";
 import { downloadCvPdf } from "@/lib/cv/pdf-export";
 import { useMeasuredCvFit } from "@/hooks/use-measured-cv-fit";
@@ -59,12 +56,11 @@ export function CvPreviewSection({
 
   const isPlaceholder = !generatedTexts;
 
-  const { fittedCv: displayCv, pages = [], measuring } = useMeasuredCvFit(
-    draftCv,
-    analysis,
-    pageCount,
-    isPlaceholder,
-  );
+  const {
+    fittedCv: displayCv,
+    pages = [],
+    measuring,
+  } = useMeasuredCvFit(draftCv, analysis, pageCount, isPlaceholder);
 
   useEffect(() => {
     if (!onPlacedBulletCountsChange) return;
@@ -133,7 +129,11 @@ export function CvPreviewSection({
         .trim()
         .replace(/\s+/g, "_")
         .replace(/[^\w\-]+/g, "");
-      await downloadCvPdf(element, `resume_${safeName || "resume"}.pdf`, pageCount);
+      await downloadCvPdf(
+        element,
+        `resume_${safeName || "resume"}.pdf`,
+        pageCount,
+      );
     } catch (error) {
       console.error("[CvPreviewSection] PDF download failed:", error);
     } finally {

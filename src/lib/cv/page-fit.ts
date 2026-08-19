@@ -19,7 +19,11 @@ export function getPageLineBudget(pageCount: number): number {
   return Math.max(1, pageCount) * LINES_PER_PAGE - FIT_SAFETY_LINES;
 }
 
-export { estimateExperienceLines, estimateAttributeLines, estimateSummaryLines } from "@/lib/cv/line-estimates";
+export {
+  estimateExperienceLines,
+  estimateAttributeLines,
+  estimateSummaryLines,
+} from "@/lib/cv/line-estimates";
 
 export function fitAttributesToBudget(
   sections: RenderedCv["attributeSections"],

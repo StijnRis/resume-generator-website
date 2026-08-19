@@ -12,9 +12,7 @@ export function NumberEvidenceList({
   emptyLabel = "No numbers in generated text.",
 }: NumberEvidenceListProps) {
   if (items.length === 0) {
-    return (
-      <p className="text-[11px] text-zinc-400 mt-1">{emptyLabel}</p>
-    );
+    return <p className="text-[11px] text-zinc-400 mt-1">{emptyLabel}</p>;
   }
 
   const unmatched = items.filter((item) => !item.matched).length;
