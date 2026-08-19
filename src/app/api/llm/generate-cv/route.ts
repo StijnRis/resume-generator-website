@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 
 import {
-  getExperienceBulletCount,
   getExperienceImportance,
   normalizeAnalysis,
+  rankBulletsForFit,
 } from "@/lib/analysis/experience-score";
 import { mergeExperienceDataForLlm } from "@/lib/analysis/merge-experience-data";
 import {
   applyAllSuggestedMerges,
   buildExperienceUnits,
-  getUnitBulletCount,
+  getUnitBullets,
   getUnitCvId,
   getUnitImportance,
   isUnitIncluded,
@@ -18,12 +18,13 @@ import { logRouteError } from "@/lib/api/log-error";
 import {
   buildAttributeUnits,
   defaultAttributeSectionTitle,
-  getAttributeUnitId,
   getAttributeUnitImportance,
+  shouldIncludeAttributeCategory,
 } from "@/lib/analysis/attribute-merges";
 import {
   getAttributeItemById,
   getAttributeRowItems,
+  getCategoryLabel,
   getExperienceItemById,
   getExperienceOrganization,
 } from "@/lib/biography/lookup";
@@ -41,9 +42,9 @@ import { validateWithSchema } from "@/lib/validation";
 import type {
   BatchedCvTextGeneration,
   Biography,
+  GeneratedCvExperienceText,
   HighLevelAnalysis,
 } from "@/lib/types";
-import { CATEGORY_LABELS } from "@/lib/types";
 
 interface GenerateCvRequest {
   jobDescription: string;
@@ -83,7 +84,13 @@ export async function POST(request: Request) {
     const experiencesToGenerate = units
       .map((unit) => {
         const cvId = getUnitCvId(unit);
-        const maxBullets = getUnitBulletCount(unit);
+        const bulletsToWrite = rankBulletsForFit(getUnitBullets(unit)).map(
+          (bullet) => ({
+            id: bullet.id,
+            topic: bullet.topic,
+            importance: bullet.importance,
+          }),
+        );
 
         if (unit.type === "single") {
           const experienceData = getExperienceItemById(
@@ -98,7 +105,7 @@ export async function POST(request: Request) {
             category: unit.item.category,
             importance: getExperienceImportance(unit.item),
             relevance_reason: unit.item.reason,
-            max_bullet_points: maxBullets,
+            bullets_to_write: bulletsToWrite,
             tense: isOngoingExperience(
               experienceData.end_date as string | null | undefined,
             )
@@ -165,7 +172,7 @@ export async function POST(request: Request) {
           category: unit.items[0].category,
           importance: Math.max(...unit.items.map(getExperienceImportance)),
           is_merged: true,
-          max_bullet_points: maxBullets,
+          bullets_to_write: bulletsToWrite,
           tense,
           date_range: formatMergedDateRange(starts, ends),
           organization_shared: sharedOrganization,
@@ -209,7 +216,7 @@ export async function POST(request: Request) {
         });
         attributesToTitle.push({
           id: unit.group.id,
-          default_label: defaultAttributeSectionTitle(unit),
+          default_label: defaultAttributeSectionTitle(normalized, unit),
           member_ids: unit.items.map((item) => item.id),
           items: items.filter(Boolean),
         });
@@ -217,6 +224,7 @@ export async function POST(request: Request) {
       }
 
       const cat = unit.item.category;
+      if (!shouldIncludeAttributeCategory(normalized, cat)) continue;
       const bucketId = `cat:${cat}`;
       const source = getAttributeItemById(
         biography,
@@ -233,7 +241,7 @@ export async function POST(request: Request) {
       } else {
         attributesByCategory.set(bucketId, {
           id: bucketId,
-          default_label: CATEGORY_LABELS[cat] ?? cat,
+          default_label: getCategoryLabel(normalized, cat),
           member_ids: [unit.item.id],
           items: labels.filter(Boolean),
         });
@@ -295,26 +303,25 @@ export async function POST(request: Request) {
       );
     }
 
-    const maxBulletsById = new Map(
-      units.map((unit) => [getUnitCvId(unit), getUnitBulletCount(unit)]),
+    const allowedBulletIdsByUnit = new Map(
+      units.map((unit) => [
+        getUnitCvId(unit),
+        new Set(rankBulletsForFit(getUnitBullets(unit)).map((bullet) => bullet.id)),
+      ]),
     );
 
-    const experiences: Record<
-      string,
-      {
-        summary: string;
-        bullet_points: string[];
-        title?: string;
-        organization?: string;
-        location?: string;
-      }
-    > = {};
+    const experiences: Record<string, GeneratedCvExperienceText> = {};
 
     for (const entry of validation.data.experiences) {
-      const maxBullets = maxBulletsById.get(entry.id) ?? entry.bullet_points.length;
+      const allowedIds = allowedBulletIdsByUnit.get(entry.id);
+      const bullets: Record<string, string> = {};
+      for (const bullet of entry.bullets) {
+        if (allowedIds && !allowedIds.has(bullet.id)) continue;
+        bullets[bullet.id] = bullet.text;
+      }
       experiences[entry.id] = {
         summary: entry.summary,
-        bullet_points: entry.bullet_points.slice(0, maxBullets),
+        bullets,
         ...(entry.title ? { title: entry.title.trim() } : {}),
         ...(entry.organization
           ? { organization: entry.organization.trim() }
@@ -337,20 +344,10 @@ export async function POST(request: Request) {
     const rawLabels = validation.data.ui_labels;
     const uiLabels = {
       at: rawLabels?.at?.trim() || "at",
-      attributesHeading:
-        rawLabels?.attributes_heading?.trim() || "Attributes",
+      attributesHeading: "Attributes",
       present: rawLabels?.present?.trim() || "present",
       starting: rawLabels?.starting?.trim() || "Starting",
       expected: rawLabels?.expected?.trim() || "exp.",
-      sectionTitles: {
-        work: rawLabels?.sections?.work,
-        education: rawLabels?.sections?.education,
-        volunteer: rawLabels?.sections?.volunteer,
-        extracurriculars: rawLabels?.sections?.extracurriculars,
-        events: rawLabels?.sections?.events,
-        research: rawLabels?.sections?.research,
-        projects: rawLabels?.sections?.projects,
-      },
     };
 
     return NextResponse.json({
@@ -358,7 +355,6 @@ export async function POST(request: Request) {
       experiences,
       attributes,
       uiLabels,
-      language,
       debug: {
         systemPrompt: BATCH_CV_GENERATION_PROMPT,
         userPrompt: JSON.stringify(userPayload, null, 2),

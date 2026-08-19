@@ -11,6 +11,11 @@ import {
 } from "@/lib/biography/validate";
 import { apiCall, useDebug } from "@/lib/debug/context";
 import {
+  contactsFromBiography,
+  ensureReservedContacts,
+} from "@/lib/formatting/header-contacts";
+import { formatContactValueIfPhone } from "@/lib/formatting/phone";
+import {
   CV_LANGUAGES,
   detectLanguageFromText,
   languageLabel,
@@ -63,6 +68,10 @@ export function SettingsSection({
         if (prepared) {
           const formatted = JSON.stringify(parsed, null, 2);
           onBiographyChange(prepared.biography, formatted);
+          onChange({
+            ...settings,
+            contacts: contactsFromBiography(prepared.biography),
+          });
           setBiographyOpen(false);
 
           if (!prepared.schemaValid) {
@@ -102,6 +111,10 @@ export function SettingsSection({
         );
         const formatted = JSON.stringify(converted, null, 2);
         onBiographyChange(reprepared.biography, formatted);
+        onChange({
+          ...settings,
+          contacts: contactsFromBiography(reprepared.biography),
+        });
         setBiographyOpen(false);
       } catch (err) {
         const message =
@@ -112,7 +125,7 @@ export function SettingsSection({
         setLoading(false);
       }
     },
-    [debug, onBiographyChange, onConversionMessage],
+    [debug, onBiographyChange, onChange, onConversionMessage, settings],
   );
 
   return (
@@ -157,7 +170,7 @@ export function SettingsSection({
             htmlFor="cv-language"
             className="block text-sm font-medium text-zinc-700 mb-1"
           >
-            CV language
+            Resume language
           </label>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -192,10 +205,6 @@ export function SettingsSection({
               Detect from job description
             </button>
           </div>
-          <p className="text-xs text-zinc-500 mt-1">
-            Auto-detected once when you first paste a job description. Override
-            anytime — AI writes the CV in this language.
-          </p>
         </div>
 
         <div>
@@ -270,86 +279,104 @@ export function SettingsSection({
         </div>
 
         <div>
-          <p className="text-sm font-medium text-zinc-700 mb-2">
-            Contact details (CV header)
-          </p>
-          <p className="text-xs text-zinc-500 mb-3">
-            Shown on one line under your name. Leave blank to use biography data
-            or defaults.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label
-                htmlFor="contact-email"
-                className="block text-xs font-medium text-zinc-600 mb-1"
-              >
-                Email
-              </label>
-              <input
-                id="contact-email"
-                type="email"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                placeholder="email@example.com"
-                value={settings.email}
-                onChange={(e) =>
-                  onChange({ ...settings, email: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="contact-phone"
-                className="block text-xs font-medium text-zinc-600 mb-1"
-              >
-                Phone
-              </label>
-              <input
-                id="contact-phone"
-                type="tel"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                placeholder="+00 000 000 000"
-                value={settings.phone}
-                onChange={(e) =>
-                  onChange({ ...settings, phone: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="contact-linkedin"
-                className="block text-xs font-medium text-zinc-600 mb-1"
-              >
-                LinkedIn
-              </label>
-              <input
-                id="contact-linkedin"
-                type="text"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                placeholder="linkedin.com/in/username"
-                value={settings.linkedin}
-                onChange={(e) =>
-                  onChange({ ...settings, linkedin: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="contact-github"
-                className="block text-xs font-medium text-zinc-600 mb-1"
-              >
-                GitHub
-              </label>
-              <input
-                id="contact-github"
-                type="text"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                placeholder="github.com/username"
-                value={settings.github}
-                onChange={(e) =>
-                  onChange({ ...settings, github: e.target.value })
-                }
-              />
-            </div>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-sm font-medium text-zinc-700">Contact details</p>
+            <button
+              type="button"
+              onClick={() =>
+                onChange({
+                  ...settings,
+                  contacts: [
+                    ...ensureReservedContacts(settings.contacts),
+                    { id: crypto.randomUUID(), kind: "other", value: "" },
+                  ],
+                })
+              }
+              className="text-xs font-medium text-blue-600 hover:underline"
+            >
+              + Add contact
+            </button>
+          </div>
+          <div className="space-y-2">
+            {ensureReservedContacts(settings.contacts).map((contact) => {
+              const reserved =
+                contact.kind === "email" ||
+                contact.kind === "phone" ||
+                contact.kind === "linkedin";
+              const label =
+                contact.kind === "email"
+                  ? "Email"
+                  : contact.kind === "phone"
+                    ? "Phone"
+                    : contact.kind === "linkedin"
+                      ? "LinkedIn"
+                      : "Other";
+              const placeholder =
+                contact.kind === "email"
+                  ? "email@example.com"
+                  : contact.kind === "phone"
+                    ? "+31 6 12 34 56 78"
+                    : contact.kind === "linkedin"
+                      ? "linkedin.com/in/…"
+                      : "github.com/… or any contact";
+              return (
+                <div key={contact.id} className="flex items-center gap-2">
+                  <label className="w-20 shrink-0 text-xs font-medium text-zinc-600">
+                    {label}
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    placeholder={placeholder}
+                    value={contact.value}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      onChange({
+                        ...settings,
+                        contacts: ensureReservedContacts(settings.contacts).map(
+                          (entry) =>
+                            entry.id === contact.id
+                              ? { ...entry, value: nextValue }
+                              : entry,
+                        ),
+                      });
+                    }}
+                    onBlur={(e) => {
+                      const formatted = formatContactValueIfPhone(
+                        e.target.value,
+                      );
+                      if (formatted === e.target.value) return;
+                      onChange({
+                        ...settings,
+                        contacts: ensureReservedContacts(settings.contacts).map(
+                          (entry) =>
+                            entry.id === contact.id
+                              ? { ...entry, value: formatted }
+                              : entry,
+                        ),
+                      });
+                    }}
+                  />
+                  {!reserved && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onChange({
+                          ...settings,
+                          contacts: ensureReservedContacts(
+                            settings.contacts,
+                          ).filter((entry) => entry.id !== contact.id),
+                        })
+                      }
+                      className="shrink-0 rounded-lg border border-zinc-200 px-2 py-2 text-xs text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+                      aria-label="Remove contact"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -362,15 +389,9 @@ export function SettingsSection({
             }
             className="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
           />
-          <div>
-            <span className="text-sm font-medium text-zinc-700">
-              Anonymous mode
-            </span>
-            <p className="text-xs text-zinc-500">
-              Replace name, email, phone, location, and profiles with dummy data
-              (John Doe)
-            </p>
-          </div>
+          <span className="text-sm font-medium text-zinc-700">
+            Anonymous mode
+          </span>
         </label>
 
         <div>
@@ -397,10 +418,6 @@ export function SettingsSection({
             }
             className="w-24 rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
           />
-          <p className="text-xs text-zinc-500 mt-1">
-            CV content is filled in order of importance until this page limit is
-            reached.
-          </p>
         </div>
       </div>
     </section>

@@ -11,15 +11,23 @@
         "properties": {
           "id": { "type": "string" },
           "summary": { "type": "string" },
-          "bullet_points": {
+          "bullets": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "text": { "type": "string" }
+              },
+              "required": ["id", "text"],
+              "additionalProperties": false
+            }
           },
           "title": { "type": "string" },
           "organization": { "type": "string" },
           "location": { "type": "string" }
         },
-        "required": ["id", "summary", "bullet_points"],
+        "required": ["id", "summary", "bullets"],
         "additionalProperties": false
       }
     },
@@ -39,32 +47,11 @@
       "type": "object",
       "properties": {
         "at": { "type": "string" },
-        "attributes_heading": { "type": "string" },
         "present": { "type": "string" },
         "starting": { "type": "string" },
-        "expected": { "type": "string" },
-        "sections": {
-          "type": "object",
-          "properties": {
-            "work": { "type": "string" },
-            "education": { "type": "string" },
-            "volunteer": { "type": "string" },
-            "extracurriculars": { "type": "string" },
-            "events": { "type": "string" },
-            "research": { "type": "string" },
-            "projects": { "type": "string" }
-          },
-          "additionalProperties": false
-        }
+        "expected": { "type": "string" }
       },
-      "required": [
-        "at",
-        "attributes_heading",
-        "present",
-        "starting",
-        "expected",
-        "sections"
-      ],
+      "required": ["at", "present", "starting", "expected"],
       "additionalProperties": false
     }
   },

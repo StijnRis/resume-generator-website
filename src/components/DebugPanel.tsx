@@ -60,6 +60,28 @@ function statusColor(status: string) {
   }
 }
 
+function CopyAllButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1200);
+        } catch {
+          // ignore clipboard failures
+        }
+      }}
+      className="text-[10px] text-zinc-400 hover:text-zinc-200 underline-offset-2 hover:underline"
+    >
+      {copied ? "Copied" : "Copy all"}
+    </button>
+  );
+}
+
 export function DebugPanel() {
   const { logs, clearLogs } = useDebug();
   const [open, setOpen] = useState(false);
@@ -176,12 +198,15 @@ export function DebugPanel() {
                         )}
                         {log.systemPrompt && (
                           <div>
-                            <p className="text-zinc-400 mb-1">
-                              System prompt{" "}
-                              <span className="text-zinc-500">
-                                ({formatPayloadSize(log.systemPrompt)})
-                              </span>
-                            </p>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className="text-zinc-400">
+                                System prompt{" "}
+                                <span className="text-zinc-500">
+                                  ({formatPayloadSize(log.systemPrompt)})
+                                </span>
+                              </p>
+                              <CopyAllButton text={log.systemPrompt} />
+                            </div>
                             <pre className="overflow-x-auto rounded bg-zinc-950 p-2 text-zinc-300 max-h-40 whitespace-pre-wrap">
                               {log.systemPrompt}
                             </pre>
@@ -189,32 +214,46 @@ export function DebugPanel() {
                         )}
                         {log.userPrompt && (
                           <div>
-                            <p className="text-zinc-400 mb-1">
-                              User message{" "}
-                              <span className="text-zinc-500">
-                                ({formatPayloadSize(log.userPrompt)})
-                              </span>
-                            </p>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className="text-zinc-400">
+                                User message{" "}
+                                <span className="text-zinc-500">
+                                  ({formatPayloadSize(log.userPrompt)})
+                                </span>
+                              </p>
+                              <CopyAllButton text={log.userPrompt} />
+                            </div>
                             <pre className="overflow-x-auto rounded bg-zinc-950 p-2 text-zinc-300 max-h-48 whitespace-pre-wrap">
                               {log.userPrompt}
                             </pre>
                           </div>
                         )}
                         <div>
-                          <p className="text-zinc-400 mb-1">
-                            Response{" "}
-                            <span className="text-zinc-500">
-                              (
-                              {log.response != null
-                                ? formatPayloadSize(
-                                    sanitizeDebugResponse(log.response),
-                                  )
-                                : isPending
-                                  ? "…"
-                                  : "0 B"}
-                              )
-                            </span>
-                          </p>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-zinc-400">
+                              Response{" "}
+                              <span className="text-zinc-500">
+                                (
+                                {log.response != null
+                                  ? formatPayloadSize(
+                                      sanitizeDebugResponse(log.response),
+                                    )
+                                  : isPending
+                                    ? "…"
+                                    : "0 B"}
+                                )
+                              </span>
+                            </p>
+                            {log.response != null && (
+                              <CopyAllButton
+                                text={JSON.stringify(
+                                  sanitizeDebugResponse(log.response),
+                                  null,
+                                  2,
+                                )}
+                              />
+                            )}
+                          </div>
                           <pre className="overflow-x-auto rounded bg-zinc-950 p-2 text-zinc-300 max-h-48">
                             {log.response != null
                               ? JSON.stringify(

@@ -1,6 +1,5 @@
-import type { ExperienceCategoryKey, HighLevelAnalysis, RenderedCv } from "@/lib/types";
-import { EXPERIENCE_CATEGORIES } from "@/lib/types";
-import { getCategoryOrder } from "@/lib/biography/lookup";
+import type { HighLevelAnalysis, RenderedCv } from "@/lib/types";
+import { getCategoryOrder, getExperienceCategoryDefs } from "@/lib/biography/lookup";
 import {
   CATEGORY_HEADER_LINES,
   estimateAttributeLines,
@@ -12,10 +11,7 @@ export function orderExperiencesForDisplay(
   experiences: RenderedCv["experiences"],
   analysis: HighLevelAnalysis,
 ): RenderedCv["experiences"] {
-  const byCategory = new Map<
-    ExperienceCategoryKey,
-    RenderedCv["experiences"]
-  >();
+  const byCategory = new Map<string, RenderedCv["experiences"]>();
 
   for (const exp of experiences) {
     const list = byCategory.get(exp.category) ?? [];
@@ -23,11 +19,18 @@ export function orderExperiencesForDisplay(
     byCategory.set(exp.category, list);
   }
 
-  const categoryOrder = EXPERIENCE_CATEGORIES.filter((category) =>
-    byCategory.has(category),
-  ).sort(
-    (a, b) => getCategoryOrder(analysis, a) - getCategoryOrder(analysis, b),
-  );
+  const categoryOrder = getExperienceCategoryDefs(analysis)
+    .map((def) => def.id)
+    .filter((category) => byCategory.has(category))
+    .sort(
+      (a, b) => getCategoryOrder(analysis, a) - getCategoryOrder(analysis, b),
+    );
+
+  // Include any categories present on experiences but missing from the
+  // analysis category defs (e.g. stale data), ordered after known ones.
+  for (const category of byCategory.keys()) {
+    if (!categoryOrder.includes(category)) categoryOrder.push(category);
+  }
 
   const result: RenderedCv["experiences"] = [];
   for (const category of categoryOrder) {
@@ -45,7 +48,7 @@ export function orderExperiencesForDisplay(
 
 export function estimateCvDisplayLines(cv: RenderedCv): number {
   let lines = 6 + estimateSummaryLines(cv.summary);
-  let lastCategory: ExperienceCategoryKey | null = null;
+  let lastCategory: string | null = null;
 
   for (const exp of cv.experiences) {
     if (exp.category !== lastCategory) {

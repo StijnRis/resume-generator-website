@@ -34,11 +34,9 @@ export function useMeasuredCvFit(
     }
 
     const runId = ++runIdRef.current;
-    setFittedCv(null);
-    setPages([]);
+    // Keep previous fitted CV/pages visible while remeasuring to avoid white flash.
     setMeasuring(true);
 
-    // Defer so measurement never runs inside React render/commit.
     const timer = window.setTimeout(() => {
       const result = fitAndPaginateCv(
         draft,
@@ -61,8 +59,8 @@ export function useMeasuredCvFit(
   }, [draft, analysis, pageCount, isPlaceholder]);
 
   return {
-    fittedCv: measuring ? null : fittedCv,
-    pages: measuring ? [] : (pages ?? []),
+    fittedCv,
+    pages: pages ?? [],
     measuring,
   };
 }

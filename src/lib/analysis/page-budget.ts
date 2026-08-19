@@ -1,10 +1,38 @@
-import { getExperienceImportance, isExperienceIncluded } from "@/lib/analysis/experience-score";
+import {
+  getExperienceBulletCount,
+  getExperienceImportance,
+  isExperienceIncluded,
+} from "@/lib/analysis/experience-score";
 import {
   applyAllSuggestedMerges,
   buildExperienceUnits,
   isUnitIncluded,
 } from "@/lib/analysis/merges";
-import type { Biography, HighLevelAnalysis } from "@/lib/types";
+import type {
+  Biography,
+  ExperienceAnalysisItem,
+  HighLevelAnalysis,
+} from "@/lib/types";
+
+/** Bumps importance on 0-importance bullets (in order) until `minCount` bullets are eligible. */
+function bumpBulletImportances(
+  item: ExperienceAnalysisItem,
+  minCount: number,
+): ExperienceAnalysisItem {
+  const bullets = item.bullets ?? [];
+  if (bullets.length === 0) return item;
+
+  let remaining = minCount - getExperienceBulletCount(item);
+  if (remaining <= 0) return item;
+
+  const nextBullets = bullets.map((bullet) => {
+    if (remaining <= 0 || bullet.importance > 0) return bullet;
+    remaining -= 1;
+    return { ...bullet, importance: 40 };
+  });
+
+  return { ...item, bullets: nextBullets };
+}
 
 /** Rough minimum included experiences to aim for ~N pages of content. */
 function targetIncludedUnits(pageCount: number): number {
@@ -37,17 +65,16 @@ export function expandAnalysisForPageBudget(
       ...next,
       experience_analysis: next.experience_analysis.map((entry) =>
         entry.id === item.id
-          ? {
-              ...entry,
-              relevance_score: 25,
-              suggested_bullet_points: Math.max(
-                1,
-                entry.suggested_bullet_points ?? 0,
-              ),
-              reason: entry.reason.includes("Added by code")
-                ? "Promoted to fill the target page budget."
-                : `${entry.reason} (Promoted to fill page budget.)`,
-            }
+          ? bumpBulletImportances(
+              {
+                ...entry,
+                relevance_score: 25,
+                reason: entry.reason.includes("Added by code")
+                  ? "Promoted to fill the target page budget."
+                  : `${entry.reason} (Promoted to fill page budget.)`,
+              },
+              1,
+            )
           : entry,
       ),
     };
@@ -58,12 +85,7 @@ export function expandAnalysisForPageBudget(
       ...next,
       experience_analysis: next.experience_analysis.map((entry) => {
         if (!isExperienceIncluded(entry)) return entry;
-        const bullets = entry.suggested_bullet_points ?? 0;
-        if (bullets >= 2) return entry;
-        return {
-          ...entry,
-          suggested_bullet_points: Math.min(3, Math.max(2, bullets)),
-        };
+        return bumpBulletImportances(entry, 2);
       }),
     };
   }

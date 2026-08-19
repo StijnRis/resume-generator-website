@@ -1,3 +1,31 @@
+export type ExperienceSourceType = string;
+export type AttributeSourceType = string;
+
+/** Known source keys that may appear on uploaded biography JSON. */
+export const KNOWN_EXPERIENCE_SOURCE_TYPES = [
+  "work",
+  "education",
+  "volunteer",
+  "extracurriculars",
+  "events",
+  "research",
+  "projects",
+  "experience",
+  "sports",
+] as const;
+
+export const KNOWN_ATTRIBUTE_SOURCE_TYPES = [
+  "skills",
+  "tools",
+  "interests",
+  "certificates",
+  "awards",
+  "publications",
+  "references",
+  "languages",
+] as const;
+
+/** @deprecated Prefer dynamic AI category ids (string). Kept for label fallbacks. */
 export type ExperienceCategoryKey =
   | "work"
   | "education"
@@ -7,6 +35,7 @@ export type ExperienceCategoryKey =
   | "research"
   | "projects";
 
+/** @deprecated Prefer dynamic AI category ids (string). */
 export type AttributeCategoryKey =
   | "skills"
   | "tools"
@@ -17,7 +46,7 @@ export type AttributeCategoryKey =
   | "references"
   | "languages";
 
-export type BiographyCategoryKey = ExperienceCategoryKey | AttributeCategoryKey;
+export type BiographyCategoryKey = string;
 
 export interface Location {
   city: string;
@@ -39,10 +68,26 @@ export interface Basics {
   phone: string;
   location: Location;
   profiles: Profile[];
+  /**
+   * Ordered contact strings for the CV header line.
+   * When set (even empty), replaces the default email/phone/LinkedIn/GitHub/location composition.
+   */
+  header_contacts?: string[];
 }
 
-export interface ExperienceBase {
+export type ContactKind = "email" | "phone" | "linkedin" | "other";
+
+/** One editable contact line shown under the name on the resume. */
+export interface ContactDetail {
+  id: string;
+  value: string;
+  kind?: ContactKind;
+}
+
+/** Flat experience item; `type` is the original JSON key / source bucket. */
+export interface BiographyExperience {
   id?: string;
+  type: ExperienceSourceType;
   title: string;
   hours_per_week?: number | null;
   start_date: string;
@@ -53,140 +98,87 @@ export interface ExperienceBase {
   highlights?: string[];
   skills?: string[];
   tools?: string[];
-}
-
-export interface WorkExperience extends ExperienceBase {
-  organization: string;
-  position: string;
-}
-
-export interface EducationExperience extends ExperienceBase {
-  organization: string;
-  area: string;
-  degree: string;
+  organization?: string;
+  position?: string;
+  role?: string;
+  degree?: string;
+  area?: string;
   grade?: number | null;
   grade_scale?: number | null;
   courses?: unknown[];
-}
-
-export interface VolunteerExperience extends ExperienceBase {
-  organization: string;
-  role: string;
-}
-
-export interface ExtracurricularExperience extends ExperienceBase {
-  organization: string;
-}
-
-export interface ResearchExperience extends ExperienceBase {
-  organization: string;
-}
-
-export interface ProjectExperience extends ExperienceBase {
   roles?: string[];
-  type?: string | null;
+  /** Original project `type` field when the source was projects. */
+  project_type?: string | null;
+  goal?: string;
+  reference?: string;
 }
 
-export interface EventItem extends ExperienceBase {
-  organization: string;
-}
-
-export interface Skill {
+/** Flat attribute item; `type` is the original JSON key / source bucket. */
+export interface BiographyAttribute {
   id?: string;
-  name: string;
-  level: string;
+  type: AttributeSourceType;
+  name?: string;
+  title?: string;
+  value?: string;
+  level?: string;
   keywords?: string[];
-}
-
-export interface ToolItem {
-  id?: string;
-  name: string;
-}
-
-export interface CertificateItem {
-  id?: string;
-  name: string;
-  date: string;
-  issuer: string;
+  language?: string;
+  fluency?: string;
+  date?: string;
+  issuer?: string;
+  awarder?: string;
+  publisher?: string;
+  release_date?: string;
+  reference?: string;
+  position?: string;
+  contact?: string;
   url?: string | null;
   summary?: string | null;
-}
-
-export interface AwardItem {
-  id?: string;
-  title: string;
-  url?: string | null;
-  awarder: string;
-  date: string;
   highlights?: string[];
-  summary?: string | null;
-}
-
-export interface PublicationItem {
-  id?: string;
-  name: string;
-  publisher: string;
-  release_date: string;
-  url?: string | null;
-  summary?: string | null;
-}
-
-export interface ReferenceItem {
-  id?: string;
-  name: string;
-  reference: string;
-  position?: string | null;
-  contact?: string | null;
-}
-
-export interface LanguageItem {
-  id?: string;
-  language: string;
-  fluency: "native" | "fluent" | "intermediate" | "basic";
-}
-
-export interface InterestItem {
-  id?: string;
-  value: string;
 }
 
 export interface Biography {
   basics: Basics;
   label: string;
   summary: string;
-  work?: WorkExperience[];
-  education?: EducationExperience[];
-  volunteer?: VolunteerExperience[];
-  extracurriculars?: ExtracurricularExperience[];
-  events?: EventItem[];
-  skills?: Skill[];
-  tools?: ToolItem[];
-  interests?: (string | InterestItem)[];
-  research?: ResearchExperience[];
-  projects?: ProjectExperience[];
-  certificates?: CertificateItem[];
-  awards?: AwardItem[];
-  publications?: PublicationItem[];
-  references?: ReferenceItem[];
-  languages?: LanguageItem[];
+  experiences: BiographyExperience[];
+  attributes: BiographyAttribute[];
 }
 
-export interface CategoryAnalysisItem {
-  category: BiographyCategoryKey;
-  relevance_score: number;
+/** AI-defined CV section category (dynamic). */
+export interface DynamicCategoryDefinition {
+  /** Same as label; used as the category key on analysis items. */
+  id: string;
+  /** Resume heading; analysis items refer to this exact string. */
+  label: string;
+  /** Section order: 1 = first. */
+  order: number;
   reason: string;
+}
+
+/** One candidate bullet for an experience (topic + show-importance). */
+export interface ExperienceBulletCandidate {
+  id: string;
+  /** What the bullet should be about. */
+  topic: string;
+  /** 0 = never show; 100 = always prefer. Used by page-fit. */
+  importance: number;
+  /** Generated or user-edited bullet text. */
+  text?: string;
 }
 
 export interface ExperienceAnalysisItem {
-  category: ExperienceCategoryKey;
+  /** Dynamic AI category id. */
+  category: string;
   id: string;
   relevance_score: number;
   reason: string;
-  suggested_bullet_points: number;
+  bullets: ExperienceBulletCandidate[];
 }
 
 export interface AttributeAnalysisItem {
-  category: AttributeCategoryKey;
+  /** Dynamic AI category id. */
+  category: string;
   id: string;
   relevance_score: number;
   reason: string;
@@ -194,15 +186,15 @@ export interface AttributeAnalysisItem {
 
 export interface ExperienceMergeGroup {
   id: string;
-  category?: ExperienceCategoryKey;
+  category?: string;
   member_ids: string[];
   relevance_score?: number;
-  suggested_bullet_points?: number;
+  bullets?: ExperienceBulletCandidate[];
 }
 
 export interface AttributeMergeGroup {
   id: string;
-  category?: AttributeCategoryKey;
+  category?: string;
   member_ids: string[];
   relevance_score?: number;
   /** Optional AI/user title for the merged attribute row. */
@@ -210,49 +202,22 @@ export interface AttributeMergeGroup {
 }
 
 export interface HighLevelAnalysis {
-  category_analysis: CategoryAnalysisItem[];
+  experience_categories: DynamicCategoryDefinition[];
+  attribute_categories: DynamicCategoryDefinition[];
   experience_analysis: ExperienceAnalysisItem[];
   attribute_analysis: AttributeAnalysisItem[];
+  /** 0 = omit summary; 1–100 = keep priority vs other content. */
+  summary_importance?: number;
   experience_merges?: ExperienceMergeGroup[];
   attribute_merges?: AttributeMergeGroup[];
-}
-
-export interface DynamicExperience {
-  id: string;
-  title: string;
-  details: { detail: string }[];
-}
-
-export interface ExperienceCategory {
-  category: string;
-  experiences: DynamicExperience[];
-}
-
-export interface AttributeCategory {
-  category: string;
-  attributes: { id: string; item: string }[];
-}
-
-export interface DynamicGeneralResume {
-  summary: string;
-  experience_categories: ExperienceCategory[];
-  attribute_categories: AttributeCategory[];
-}
-
-export interface ExperienceTextGeneration {
-  summary: string;
-  bullet_points: string[];
 }
 
 export interface BatchedExperienceText {
   id: string;
   summary: string;
-  bullet_points: string[];
-  /** Short combined title for merged entries. */
+  bullets: { id: string; text: string }[];
   title?: string;
-  /** Optional short organization/context for merged entries. */
   organization?: string;
-  /** Generic location when member locations differ. */
   location?: string;
 }
 
@@ -262,20 +227,21 @@ export interface BatchedCvTextGeneration {
   attributes?: { id: string; title: string }[];
   ui_labels?: {
     at: string;
-    attributes_heading: string;
     present: string;
     starting: string;
     expected: string;
-    sections: Partial<Record<ExperienceCategoryKey, string>>;
   };
 }
 
 export interface GeneratedCvExperienceText {
   summary: string;
-  bullet_points: string[];
   title?: string;
   organization?: string;
   location?: string;
+  /** Editable date range shown on the CV (overrides biography dates when set). */
+  dateRange?: string;
+  /** Bullet text keyed by bullet id. */
+  bullets?: Record<string, string>;
 }
 
 export interface GeneratedCvAttributeText {
@@ -293,17 +259,15 @@ export interface GeneratedCvTexts {
   summary?: string;
   experiences: Record<string, GeneratedCvExperienceText>;
   attributes?: Record<string, GeneratedCvAttributeText>;
-  /** Original → translated strings for copied biography fields / UI labels. */
   translations?: TranslationMapping[];
   language?: string;
-  /** Localized CV chrome: "at", section headings, date words. */
   uiLabels?: {
     at?: string;
     attributesHeading?: string;
     present?: string;
     starting?: string;
     expected?: string;
-    sectionTitles?: Partial<Record<ExperienceCategoryKey, string>>;
+    sectionTitles?: Record<string, string>;
   };
 }
 
@@ -313,11 +277,7 @@ export interface GenerationSettings {
   jobDescription: string;
   anonymousMode: boolean;
   pageCount: number;
-  email: string;
-  phone: string;
-  linkedin: string;
-  github: string;
-  /** ISO 639-3 style code (e.g. eng, nld). */
+  contacts: ContactDetail[];
   language: string;
 }
 
@@ -334,17 +294,23 @@ export interface DebugLogEntry {
   userPrompt?: string;
 }
 
+export interface CvBulletPoint {
+  id: string;
+  text: string;
+  importance: number;
+  topic: string;
+}
+
 export interface CvExperienceEntry {
   id: string;
-  category: ExperienceCategoryKey;
+  category: string;
   title: string;
   subtitle: string;
   dateRange: string;
   location: string;
   partTime?: boolean;
   summary?: string;
-  bulletPoints: string[];
-  /** Bullets before page-fit truncation (for UI). */
+  bulletPoints: CvBulletPoint[];
   requestedBulletCount?: number;
   relevanceScore: number;
   sortDate: number;
@@ -354,7 +320,7 @@ export interface CvExperienceEntry {
 
 export interface CvAttributeEntry {
   id: string;
-  category: AttributeCategoryKey;
+  category: string;
   label: string;
   relevanceScore: number;
 }
@@ -369,16 +335,42 @@ export interface RenderedCv {
     category: string;
     items: { id: string; text: string }[];
     order?: number;
+    /** Max item importance in this section (for page-fit competition). */
+    relevanceScore?: number;
   }[];
-  /** Section order numbers (1 = first) keyed by biography category. */
-  categoryOrders?: Partial<Record<BiographyCategoryKey, number>>;
-  /** Localized connector / headings used while rendering. */
+  /** 0 = omit; used by page-fit. */
+  summaryImportance?: number;
+  categoryOrders?: Record<string, number>;
   uiLabels?: {
     at?: string;
     attributesHeading?: string;
-    sectionTitles?: Partial<Record<ExperienceCategoryKey, string>>;
+    sectionTitles?: Record<string, string>;
   };
 }
+
+/** Display labels for known source types (parsed biography grouping). */
+export const SOURCE_TYPE_LABELS: Record<string, string> = {
+  work: "Work Experience",
+  education: "Education",
+  volunteer: "Volunteering",
+  extracurriculars: "Extracurriculars",
+  events: "Events",
+  research: "Research",
+  projects: "Projects",
+  experience: "Experience",
+  sports: "Sports",
+  skills: "Skills",
+  tools: "Tools",
+  interests: "Interests",
+  certificates: "Certificates",
+  awards: "Awards",
+  publications: "Publications",
+  references: "References",
+  languages: "Languages",
+};
+
+/** @deprecated Use SOURCE_TYPE_LABELS. */
+export const CATEGORY_LABELS = SOURCE_TYPE_LABELS;
 
 export const EXPERIENCE_CATEGORIES: ExperienceCategoryKey[] = [
   "work",
@@ -401,20 +393,9 @@ export const ATTRIBUTE_CATEGORIES: AttributeCategoryKey[] = [
   "languages",
 ];
 
-export const CATEGORY_LABELS: Record<BiographyCategoryKey, string> = {
-  work: "Work Experience",
-  education: "Education",
-  volunteer: "Volunteering",
-  extracurriculars: "Extracurriculars",
-  events: "Events",
-  research: "Research",
-  projects: "Projects",
-  skills: "Skills",
-  tools: "Tools",
-  interests: "Interests",
-  certificates: "Certificates",
-  awards: "Awards",
-  publications: "Publications",
-  references: "References",
-  languages: "Languages",
-};
+export function sourceTypeLabel(type: string): string {
+  return (
+    SOURCE_TYPE_LABELS[type] ??
+    type.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}

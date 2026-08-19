@@ -1,3 +1,4 @@
+import { normalizeUploadedBiography } from "@/lib/biography/normalize-upload";
 import type { Biography, BiographyKeyMapping } from "@/lib/types";
 
 function getValueAtPath(obj: unknown, path: string): unknown {
@@ -51,7 +52,12 @@ function setValueAtPath(obj: Record<string, unknown>, path: string, value: unkno
   }
 }
 
-const DEFAULT_BIOGRAPHY: Biography = {
+/**
+ * Scaffold matching the legacy per-category biography shape. Used only as an
+ * intermediate target for dot-path key mapping before flattening via
+ * `normalizeUploadedBiography`.
+ */
+const DEFAULT_BIOGRAPHY_SHAPE = {
   basics: {
     name: "",
     email: "unknown@example.com",
@@ -88,7 +94,7 @@ export function applyBiographyMapping(
   source: unknown,
   mapping: BiographyKeyMapping,
 ): Biography {
-  const target = structuredClone(DEFAULT_BIOGRAPHY) as unknown as Record<
+  const target = structuredClone(DEFAULT_BIOGRAPHY_SHAPE) as Record<
     string,
     unknown
   >;
@@ -100,44 +106,7 @@ export function applyBiographyMapping(
     }
   }
 
-  return normalizeBiography(target);
-}
-
-function normalizeBiography(raw: Record<string, unknown>): Biography {
-  const basics = (raw.basics as Biography["basics"]) ?? DEFAULT_BIOGRAPHY.basics;
-
-  return {
-    basics: {
-      name: String(basics.name ?? ""),
-      email: String(basics.email ?? "unknown@example.com"),
-      image: String(basics.image ?? ""),
-      phone: String(basics.phone ?? ""),
-      location: {
-        city: String(basics.location?.city ?? ""),
-        region: String(basics.location?.region ?? ""),
-        country: String(basics.location?.country ?? ""),
-        country_code: String(basics.location?.country_code ?? ""),
-      },
-      profiles: Array.isArray(basics.profiles) ? basics.profiles : [],
-    },
-    label: String(raw.label ?? ""),
-    summary: String(raw.summary ?? ""),
-    work: Array.isArray(raw.work) ? raw.work : [],
-    education: Array.isArray(raw.education) ? raw.education : [],
-    volunteer: Array.isArray(raw.volunteer) ? raw.volunteer : [],
-    extracurriculars: Array.isArray(raw.extracurriculars) ? raw.extracurriculars : [],
-    events: Array.isArray(raw.events) ? raw.events : [],
-    skills: Array.isArray(raw.skills) ? raw.skills : [],
-    tools: Array.isArray(raw.tools) ? raw.tools : [],
-    interests: Array.isArray(raw.interests) ? raw.interests.map(String) : [],
-    research: Array.isArray(raw.research) ? raw.research : [],
-    projects: Array.isArray(raw.projects) ? raw.projects : [],
-    certificates: Array.isArray(raw.certificates) ? raw.certificates : [],
-    awards: Array.isArray(raw.awards) ? raw.awards : [],
-    publications: Array.isArray(raw.publications) ? raw.publications : [],
-    references: Array.isArray(raw.references) ? raw.references : [],
-    languages: Array.isArray(raw.languages) ? raw.languages : [],
-  } as Biography;
+  return normalizeUploadedBiography(target);
 }
 
 export function getValueAtPathExported(obj: unknown, path: string): unknown {

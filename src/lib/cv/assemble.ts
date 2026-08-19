@@ -1,21 +1,21 @@
 import type {
   Biography,
-  BiographyCategoryKey,
+  CvBulletPoint,
   ExperienceAnalysisItem,
   GeneratedCvTexts,
   HighLevelAnalysis,
   RenderedCv,
 } from "@/lib/types";
-import { ATTRIBUTE_CATEGORIES, CATEGORY_LABELS, EXPERIENCE_CATEGORIES } from "@/lib/types";
 import { titleCase } from "title-case";
 import {
   getExperienceImportance,
   isExperienceIncluded,
   normalizeAnalysis,
+  rankBulletsForFit,
 } from "@/lib/analysis/experience-score";
 import {
   buildExperienceUnits,
-  getUnitBulletCount,
+  getUnitBullets,
   getUnitCvId,
   getUnitImportance,
   isUnitIncluded,
@@ -36,12 +36,16 @@ import {
   defaultAttributeSectionTitle,
   getAttributeUnitId,
   getAttributeUnitImportance,
+  shouldIncludeAttributeCategory,
   type CvAttributeUnit,
 } from "@/lib/analysis/attribute-merges";
 import {
+  getAttributeCategoryDefs,
   getAttributeItemById,
   getAttributeRowItems,
+  getCategoryLabel,
   getCategoryOrder,
+  getExperienceCategoryDefs,
   getExperienceItemById,
   getExperienceOrganization,
   getExperienceRole,
@@ -74,6 +78,27 @@ function localizeBasics(
       region: "",
       country: "",
     },
+  };
+}
+
+function buildSectionTitles(
+  analysis: HighLevelAnalysis,
+  translations?: GeneratedCvTexts["translations"],
+): Record<string, string> {
+  const titles: Record<string, string> = {};
+  for (const def of getExperienceCategoryDefs(analysis)) {
+    titles[def.id] = applyCopiedTranslation(def.label, translations);
+  }
+  return titles;
+}
+
+function cvUiLabels(
+  analysis: HighLevelAnalysis,
+  texts?: GeneratedCvTexts | null,
+) {
+  return {
+    ...mergeUiLabels(texts?.uiLabels),
+    sectionTitles: buildSectionTitles(analysis, texts?.translations),
   };
 }
 
@@ -115,6 +140,15 @@ function collectAttributeUnitItems(
     }
   }
 
+  values.sort((a, b) => {
+    const scoreA =
+      items.find((item) => item.id === a.id)?.relevance_score ?? 0;
+    const scoreB =
+      items.find((item) => item.id === b.id)?.relevance_score ?? 0;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return a.text.localeCompare(b.text);
+  });
+
   return values;
 }
 
@@ -123,9 +157,11 @@ function buildAttributeSections(
   analysis: HighLevelAnalysis,
   texts?: GeneratedCvTexts | null,
 ): RenderedCv["attributeSections"] {
-  const units = buildAttributeUnits(analysis).filter(
-    (unit) => getAttributeUnitImportance(unit) > 0,
-  );
+  const units = buildAttributeUnits(analysis)
+    .filter((unit) => getAttributeUnitImportance(unit) > 0)
+    .sort(
+      (a, b) => getAttributeUnitImportance(b) - getAttributeUnitImportance(a),
+    );
 
   // Group unmerged singles by category into one row per category (unless titled individually by AI).
   const categoryBuckets = new Map<
@@ -153,21 +189,32 @@ function buildAttributeSections(
       const title =
         texts?.attributes?.[id]?.title?.trim() ||
         unit.group.title?.trim() ||
-        defaultAttributeSectionTitle(unit);
+        defaultAttributeSectionTitle(analysis, unit);
       sections.push({
         id,
         category: title,
-        items,
+        items: [...items].sort((a, b) => {
+          const scoreA =
+            unit.items.find((item) => item.id === a.id)?.relevance_score ?? 0;
+          const scoreB =
+            unit.items.find((item) => item.id === b.id)?.relevance_score ?? 0;
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          return a.text.localeCompare(b.text);
+        }),
         order: Math.min(
           ...unit.items.map((item) =>
             getCategoryOrder(analysis, item.category),
           ),
+        ),
+        relevanceScore: Math.max(
+          ...unit.items.map((item) => item.relevance_score ?? 0),
         ),
       });
       continue;
     }
 
     const category = unit.item.category;
+    if (!shouldIncludeAttributeCategory(analysis, category)) continue;
     const bucketId = `cat:${category}`;
     const itemValues = collectAttributeUnitItems(
       biography,
@@ -196,8 +243,7 @@ function buildAttributeSections(
       const title =
         texts?.attributes?.[bucketId]?.title?.trim() ||
         texts?.attributes?.[category]?.title?.trim() ||
-        CATEGORY_LABELS[category] ||
-        category;
+        getCategoryLabel(analysis, category);
       categoryBuckets.set(bucketId, {
         id: bucketId,
         items: itemValues,
@@ -208,12 +254,24 @@ function buildAttributeSections(
     }
   }
 
+  const scoreById = new Map(
+    analysis.attribute_analysis.map((item) => [item.id, item.relevance_score]),
+  );
+  const sortSkillItems = (items: { id: string; text: string }[]) =>
+    [...items].sort((a, b) => {
+      const scoreA = scoreById.get(a.id) ?? 0;
+      const scoreB = scoreById.get(b.id) ?? 0;
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return a.text.localeCompare(b.text);
+    });
+
   for (const bucket of categoryBuckets.values()) {
     sections.push({
       id: bucket.id,
       category: bucket.title,
-      items: bucket.items,
+      items: sortSkillItems(bucket.items),
       order: bucket.order,
+      relevanceScore: bucket.maxScore,
     });
   }
 
@@ -223,9 +281,10 @@ function buildAttributeSections(
 }
 
 function formatExperienceTitle(value: string): string {
+  // Preserve meaningful punctuation (/, ,, &, -). Only strip wrapping quotes.
   return titleCase(
     value
-      .replace(/[.,:;'"`!?()[\]{}]/g, " ")
+      .replace(/["'`]/g, "")
       .replace(/\s+/g, " ")
       .trim(),
   );
@@ -282,13 +341,14 @@ export function buildPlaceholderCv(
   const units = getUnitsForPageFill(normalized, biography);
 
   const experiences = units.map((unit) => {
-    const bulletCount = getUnitBulletCount(unit);
+    const bullets = rankBulletsForFit(getUnitBullets(unit));
     return buildExperienceEntryFromParts(biography, unit, {
-      bulletPoints: Array.from(
-        { length: bulletCount },
-        (_, i) =>
-          `[Bullet point ${i + 1} — click Regenerate to generate tailored content]`,
-      ),
+      bulletPoints: bullets.map((bullet, i) => ({
+        id: bullet.id,
+        text: `[Bullet point ${i + 1} — click Regenerate to generate tailored content]`,
+        importance: bullet.importance,
+        topic: bullet.topic,
+      })),
       title: unit.type === "merged" ? "Combined Entry" : undefined,
     });
   });
@@ -297,11 +357,14 @@ export function buildPlaceholderCv(
     basics: biography.basics,
     label: biography.label,
     summary:
-      "[Professional summary — click Regenerate to generate tailored content]",
+      (normalized.summary_importance ?? 70) > 0
+        ? "[Professional summary — click Regenerate to generate tailored content]"
+        : "",
+    summaryImportance: normalized.summary_importance ?? 70,
     experiences,
     attributeSections: buildAttributeSections(biography, normalized),
     categoryOrders: buildCategoryOrders(normalized),
-    uiLabels: mergeUiLabels(null),
+    uiLabels: cvUiLabels(normalized),
   };
 
   return draft;
@@ -314,21 +377,32 @@ export function buildFinalCv(
 ): RenderedCv {
   const normalized = normalizeAnalysis(analysis);
   const units = getUnitsForPageFill(normalized, biography);
-  const uiLabels = mergeUiLabels(texts.uiLabels);
+  const uiLabels = cvUiLabels(normalized, texts);
   const dateOptions = dateOptionsFromTexts(texts);
 
   const experiences = units.map((unit) => {
     const cvId = getUnitCvId(unit);
     const generated = texts.experiences[cvId];
-    const bulletCount = getUnitBulletCount(unit);
+    const generatedBullets = generated?.bullets;
+    const bulletPoints: CvBulletPoint[] = generatedBullets
+      ? rankBulletsForFit(getUnitBullets(unit))
+          .filter((bullet) => generatedBullets[bullet.id] != null)
+          .map((bullet) => ({
+            id: bullet.id,
+            text: generatedBullets[bullet.id],
+            importance: bullet.importance,
+            topic: bullet.topic,
+          }))
+      : [];
     return buildExperienceEntryFromParts(
       biography,
       unit,
       {
-        bulletPoints: (generated?.bullet_points ?? []).slice(0, bulletCount),
+        bulletPoints,
         title: generated?.title,
         organization: generated?.organization,
         location: generated?.location,
+        dateRange: generated?.dateRange,
       },
       texts.translations,
       dateOptions,
@@ -338,7 +412,11 @@ export function buildFinalCv(
   const draft: RenderedCv = {
     basics: localizeBasics(biography.basics, texts.translations),
     label: biography.label,
-    summary: texts.summary ?? biography.summary,
+    summary:
+      (normalized.summary_importance ?? 70) > 0
+        ? (texts.summary ?? biography.summary)
+        : "",
+    summaryImportance: normalized.summary_importance ?? 70,
     experiences,
     attributeSections: buildAttributeSections(biography, normalized, texts),
     categoryOrders: buildCategoryOrders(normalized),
@@ -379,10 +457,11 @@ function buildExperienceEntryFromParts(
   biography: Biography,
   unit: CvExperienceUnit,
   generated: {
-    bulletPoints: string[];
+    bulletPoints: CvBulletPoint[];
     title?: string;
     organization?: string;
     location?: string;
+    dateRange?: string;
   },
   translations?: GeneratedCvTexts["translations"],
   dateOptions?: ReturnType<typeof dateOptionsFromTexts>,
@@ -410,7 +489,9 @@ function buildExperienceEntryFromParts(
     const source = getExperienceItemById(biography, item.category, item.id);
     return source?.end_date as string | null | undefined;
   });
-  const dateRange = formatMergedDateRange(starts, ends, dateOptions);
+  const dateRange =
+    generated.dateRange?.trim() ||
+    formatMergedDateRange(starts, ends, dateOptions);
 
   const organizations = unit.items.map((item) => {
     const source = getExperienceItemById(biography, item.category, item.id);
@@ -469,10 +550,11 @@ function buildSingleExperienceEntry(
   biography: Biography,
   item: ExperienceAnalysisItem,
   generated: {
-    bulletPoints: string[];
+    bulletPoints: CvBulletPoint[];
     title?: string;
     organization?: string;
     location?: string;
+    dateRange?: string;
   },
   translations?: GeneratedCvTexts["translations"],
   dateOptions?: ReturnType<typeof dateOptionsFromTexts>,
@@ -489,13 +571,15 @@ function buildSingleExperienceEntry(
     ).trim(),
     translations,
   );
-  const dateRange = source
-    ? formatDateRange(
-        String(source.start_date ?? ""),
-        source.end_date as string | null,
-        dateOptions,
-      )
-    : "";
+  const dateRange =
+    generated.dateRange?.trim() ||
+    (source
+      ? formatDateRange(
+          String(source.start_date ?? ""),
+          source.end_date as string | null,
+          dateOptions,
+        )
+      : "");
   const location = applyCopiedTranslation(
     (
       generated.location?.trim() ||
@@ -524,10 +608,13 @@ function buildSingleExperienceEntry(
 
 function buildCategoryOrders(
   analysis: HighLevelAnalysis,
-): Partial<Record<BiographyCategoryKey, number>> {
-  const orders: Partial<Record<BiographyCategoryKey, number>> = {};
-  for (const category of [...EXPERIENCE_CATEGORIES, ...ATTRIBUTE_CATEGORIES]) {
-    orders[category] = getCategoryOrder(analysis, category);
+): Record<string, number> {
+  const orders: Record<string, number> = {};
+  for (const def of [
+    ...getExperienceCategoryDefs(analysis),
+    ...getAttributeCategoryDefs(analysis),
+  ]) {
+    orders[def.id] = def.order;
   }
   return orders;
 }

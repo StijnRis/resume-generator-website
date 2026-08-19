@@ -3,35 +3,29 @@
 export const relevanceResponseSchema = {
   type: "object",
   properties: {
-    category_analysis: {
+    experience_categories: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          category: {
-            type: "string",
-            enum: [
-              "work",
-              "education",
-              "volunteer",
-              "extracurriculars",
-              "events",
-              "research",
-              "projects",
-              "skills",
-              "tools",
-              "interests",
-              "certificates",
-              "awards",
-              "publications",
-              "references",
-              "languages",
-            ],
-          },
-          relevance_score: { type: "integer", minimum: 1, maximum: 20 },
+          label: { type: "string" },
+          order: { type: "integer", minimum: 1, maximum: 20 },
           reason: { type: "string" },
         },
-        required: ["category", "relevance_score", "reason"],
+        required: ["label", "order", "reason"],
+        additionalProperties: false,
+      },
+    },
+    attribute_categories: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          label: { type: "string" },
+          order: { type: "integer", minimum: 1, maximum: 20 },
+          reason: { type: "string" },
+        },
+        required: ["label", "order", "reason"],
         additionalProperties: false,
       },
     },
@@ -40,29 +34,61 @@ export const relevanceResponseSchema = {
       items: {
         type: "object",
         properties: {
-          category: {
-            type: "string",
-            enum: [
-              "work",
-              "education",
-              "volunteer",
-              "extracurriculars",
-              "events",
-              "research",
-              "projects",
-            ],
-          },
+          category: { type: "string" },
           id: { type: "string" },
           relevance_score: { type: "integer", minimum: 0, maximum: 100 },
           reason: { type: "string" },
-          suggested_bullet_points: { type: "integer", minimum: 0, maximum: 5 },
+          bullets: {
+            type: "array",
+            minItems: 3,
+            items: {
+              type: "object",
+              properties: {
+                topic: { type: "string" },
+                importance: { type: "integer", minimum: 0, maximum: 100 },
+              },
+              required: ["topic", "importance"],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["category", "id", "relevance_score", "reason", "bullets"],
+        additionalProperties: false,
+      },
+    },
+    experience_merges: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          member_ids: {
+            type: "array",
+            minItems: 2,
+            items: { type: "string" },
+          },
+          category: { type: "string" },
+          relevance_score: { type: "integer", minimum: 0, maximum: 100 },
+          reason: { type: "string" },
+          bullets: {
+            type: "array",
+            minItems: 3,
+            items: {
+              type: "object",
+              properties: {
+                topic: { type: "string" },
+                importance: { type: "integer", minimum: 0, maximum: 100 },
+              },
+              required: ["topic", "importance"],
+              additionalProperties: false,
+            },
+          },
         },
         required: [
+          "member_ids",
           "category",
-          "id",
           "relevance_score",
           "reason",
-          "suggested_bullet_points",
+          "bullets",
         ],
         additionalProperties: false,
       },
@@ -72,19 +98,7 @@ export const relevanceResponseSchema = {
       items: {
         type: "object",
         properties: {
-          category: {
-            type: "string",
-            enum: [
-              "skills",
-              "tools",
-              "interests",
-              "certificates",
-              "awards",
-              "publications",
-              "references",
-              "languages",
-            ],
-          },
+          category: { type: "string" },
           id: { type: "string" },
           relevance_score: { type: "integer", minimum: 0, maximum: 100 },
           reason: { type: "string" },
@@ -93,8 +107,16 @@ export const relevanceResponseSchema = {
         additionalProperties: false,
       },
     },
+    summary_importance: { type: "integer", minimum: 0, maximum: 100 },
   },
-  required: ["category_analysis", "experience_analysis", "attribute_analysis"],
+  required: [
+    "experience_categories",
+    "attribute_categories",
+    "experience_analysis",
+    "attribute_analysis",
+    "experience_merges",
+    "summary_importance",
+  ],
   additionalProperties: false,
 } as const;
 
@@ -136,15 +158,23 @@ export const batchedCvTextResponseSchema = {
         properties: {
           id: { type: "string" },
           summary: { type: "string" },
-          bullet_points: {
+          bullets: {
             type: "array",
-            items: { type: "string" },
+            items: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                text: { type: "string" },
+              },
+              required: ["id", "text"],
+              additionalProperties: false,
+            },
           },
           title: { type: "string" },
           organization: { type: "string" },
           location: { type: "string" },
         },
-        required: ["id", "summary", "bullet_points"],
+        required: ["id", "summary", "bullets"],
         additionalProperties: false,
       },
     },
@@ -164,32 +194,11 @@ export const batchedCvTextResponseSchema = {
       type: "object",
       properties: {
         at: { type: "string" },
-        attributes_heading: { type: "string" },
         present: { type: "string" },
         starting: { type: "string" },
         expected: { type: "string" },
-        sections: {
-          type: "object",
-          properties: {
-            work: { type: "string" },
-            education: { type: "string" },
-            volunteer: { type: "string" },
-            extracurriculars: { type: "string" },
-            events: { type: "string" },
-            research: { type: "string" },
-            projects: { type: "string" },
-          },
-          additionalProperties: false,
-        },
       },
-      required: [
-        "at",
-        "attributes_heading",
-        "present",
-        "starting",
-        "expected",
-        "sections",
-      ],
+      required: ["at", "present", "starting", "expected"],
       additionalProperties: false,
     },
   },

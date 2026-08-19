@@ -12,10 +12,10 @@ import {
 } from "@/lib/cv/page-geometry";
 import { orderExperiencesForDisplay } from "@/lib/cv/display-order";
 import { getHeaderContactLine } from "@/lib/formatting/header-contacts";
-import { getCategoryOrder } from "@/lib/biography/lookup";
+import { formatTitleWithPartTime } from "@/lib/biography/lookup";
 import type {
+  CvBulletPoint,
   CvExperienceEntry,
-  ExperienceCategoryKey,
   HighLevelAnalysis,
   RenderedCv,
 } from "@/lib/types";
@@ -64,38 +64,6 @@ export function getPageContentHeightPx(): number {
   return getMmToPx() * CV_PAGE_CONTENT_HEIGHT_MM;
 }
 
-/** Fill order: item importance, then category importance (lower order wins), then recency. */
-function sortPoolForFill(
-  experiences: CvExperienceEntry[],
-  analysis: HighLevelAnalysis,
-): CvExperienceEntry[] {
-  return [...experiences].sort((a, b) => {
-    const scoreDiff = b.relevanceScore - a.relevanceScore;
-    if (scoreDiff !== 0) return scoreDiff;
-
-    const catA = getCategoryOrder(analysis, a.category);
-    const catB = getCategoryOrder(analysis, b.category);
-    if (catA !== catB) return catA - catB;
-
-    return b.sortDate - a.sortDate;
-  });
-}
-
-function compareFillPriority(
-  a: CvExperienceEntry,
-  b: CvExperienceEntry,
-  analysis: HighLevelAnalysis,
-): number {
-  const scoreDiff = a.relevanceScore - b.relevanceScore;
-  if (scoreDiff !== 0) return scoreDiff;
-
-  const catA = getCategoryOrder(analysis, a.category);
-  const catB = getCategoryOrder(analysis, b.category);
-  if (catA !== catB) return catB - catA; // higher order = less important = worse
-
-  return a.sortDate - b.sortDate; // older = worse
-}
-
 function groupExperiences(
   experiences: CvExperienceEntry[],
 ): Map<string, CvExperienceEntry[]> {
@@ -129,12 +97,11 @@ function buildBlockList(cv: RenderedCv): CvPageBlock[] {
 
   for (const [category, entries] of byCategory) {
     const label =
-      cv.uiLabels?.sectionTitles?.[category as ExperienceCategoryKey] ??
+      cv.uiLabels?.sectionTitles?.[category] ??
       CATEGORY_LABELS_FOR_CV[category] ??
       category;
     experiencePieces.push({
-      order:
-        cv.categoryOrders?.[category as keyof typeof cv.categoryOrders] ?? 99,
+      order: cv.categoryOrders?.[category] ?? 99,
       blocks: [
         { type: "category", label, categoryKey: category },
         ...entries.map(
@@ -312,10 +279,8 @@ function packBlocksIntoPages(
 }
 
 /**
- * Greedily includes experiences by fill priority so content packs into at most
- * `pageCount` A4 pages. Attribute categories are reserved first (one line each).
- * If an experience does not fit with all bullets, bullets are dropped until it fits
- * (down to title-only) before skipping the item.
+ * Sort all content by importance, then greedily keep a piece if it still fits.
+ * If a piece overflows, skip it and try the next (smaller) piece.
  */
 export function fitCvByMeasurement(
   draft: RenderedCv,
@@ -326,13 +291,88 @@ export function fitCvByMeasurement(
   if (typeof document === "undefined") return draft;
 
   const session = createMeasureSession(isPlaceholder);
+  try {
+  const summaryImportance = Math.min(
+    100,
+    Math.max(
+      0,
+      Math.round(
+        draft.summaryImportance ?? analysis.summary_importance ?? 70,
+      ),
+    ),
+  );
+  const summaryText = summaryImportance > 0 ? draft.summary : "";
+
+  const packedAttributes = draft.attributeSections
+    .map((section) => ({
+      ...section,
+      items: packAttributeItemsToOneLine(
+        session,
+        section.category,
+        section.items,
+      ),
+      relevanceScore: section.relevanceScore ?? 0,
+    }))
+    .filter(
+      (section) =>
+        section.items.length > 0 && (section.relevanceScore ?? 0) > 0,
+    );
+
+  type FillPiece =
+    | { type: "summary"; importance: number }
+    | { type: "experience"; id: string; importance: number }
+    | {
+        type: "bullet";
+        experienceId: string;
+        bulletId: string;
+        importance: number;
+      }
+    | { type: "attribute"; id: string; importance: number };
+
+  const pieces: FillPiece[] = [];
+  if (summaryText && summaryImportance > 0) {
+    pieces.push({ type: "summary", importance: summaryImportance });
+  }
+  for (const experience of draft.experiences) {
+    if (experience.relevanceScore <= 0) continue;
+    pieces.push({
+      type: "experience",
+      id: experience.id,
+      importance: experience.relevanceScore,
+    });
+    for (const bullet of experience.bulletPoints) {
+      if (bullet.importance <= 0) continue;
+      pieces.push({
+        type: "bullet",
+        experienceId: experience.id,
+        bulletId: bullet.id,
+        importance: bullet.importance,
+      });
+    }
+  }
+  for (const section of packedAttributes) {
+    pieces.push({
+      type: "attribute",
+      id: section.id,
+      importance: section.relevanceScore ?? 0,
+    });
+  }
+
+  pieces.sort((a, b) => {
+    if (b.importance !== a.importance) return b.importance - a.importance;
+    const rank = { experience: 0, bullet: 1, summary: 2, attribute: 3 };
+    return rank[a.type] - rank[b.type];
+  });
 
   const fits = (
     experiences: CvExperienceEntry[],
     attributeSections: RenderedCv["attributeSections"],
+    summary: string,
   ): boolean => {
     const candidate: RenderedCv = {
       ...draft,
+      summary,
+      summaryImportance,
       experiences: orderExperiencesForDisplay(experiences, analysis),
       attributeSections,
     };
@@ -342,110 +382,79 @@ export function fitCvByMeasurement(
     );
   };
 
-  try {
-    // Pack each attribute category to a single full line, then keep as many
-    // categories as fit (by section order) before filling with experiences.
-    const packedAttributes = draft.attributeSections
-      .map((section) => ({
-        ...section,
-        items: packAttributeItemsToOneLine(
-          session,
-          section.category,
-          section.items,
-        ),
-      }))
-      .filter((section) => section.items.length > 0);
+  const upsertExperience = (
+    list: CvExperienceEntry[],
+    source: CvExperienceEntry,
+    bullets: CvBulletPoint[],
+  ): CvExperienceEntry[] => {
+    const next: CvExperienceEntry = {
+      ...source,
+      bulletPoints: [...bullets].sort((a, b) => b.importance - a.importance),
+      requestedBulletCount:
+        source.requestedBulletCount ?? source.bulletPoints.length,
+    };
+    const index = list.findIndex((entry) => entry.id === source.id);
+    if (index < 0) return [...list, next];
+    return list.map((entry, i) => (i === index ? next : entry));
+  };
 
+    let summary = "";
+    let experiences: CvExperienceEntry[] = [];
     let attributeSections: RenderedCv["attributeSections"] = [];
-    for (const section of packedAttributes) {
-      const trial = [...attributeSections, section];
-      if (fits([], trial)) {
-        attributeSections = trial;
-      } else {
-        break;
-      }
-    }
 
-    const pool = sortPoolForFill(draft.experiences, analysis);
-    const included: CvExperienceEntry[] = [];
+    for (const piece of pieces) {
+      let nextSummary = summary;
+      let nextExperiences = experiences;
+      let nextAttributes = attributeSections;
 
-    for (const experience of pool) {
-      const requested =
-        experience.requestedBulletCount ?? experience.bulletPoints.length;
-      let placed: CvExperienceEntry | null = null;
-
-      for (let n = experience.bulletPoints.length; n >= 0; n--) {
-        const trial: CvExperienceEntry = {
-          ...experience,
-          bulletPoints: experience.bulletPoints.slice(0, n),
-          requestedBulletCount: requested,
-        };
-        if (fits([...included, trial], attributeSections)) {
-          placed = trial;
-          break;
-        }
-      }
-
-      if (placed) {
-        included.push(placed);
-      }
-    }
-
-    // If attributes still don't fit with the chosen experiences, drop the
-    // lowest-priority (highest order number) attribute categories.
-    let experiences = [...included];
-    while (attributeSections.length > 0) {
-      if (fits(experiences, attributeSections)) break;
-      attributeSections = attributeSections.slice(0, -1);
-    }
-
-    // Prefer keeping items: shrink bullets on lowest-priority entries first,
-    // then drop title-only entries if still over budget.
-    while (experiences.length > 0 && !fits(experiences, attributeSections)) {
-      let worstWithBullets = -1;
-      for (let i = 0; i < experiences.length; i++) {
-        if (experiences[i].bulletPoints.length === 0) continue;
-        if (
-          worstWithBullets < 0 ||
-          compareFillPriority(
-            experiences[i],
-            experiences[worstWithBullets],
-            analysis,
-          ) < 0
-        ) {
-          worstWithBullets = i;
-        }
-      }
-
-      if (worstWithBullets >= 0) {
-        experiences = experiences.map((entry, index) =>
-          index === worstWithBullets
-            ? {
-                ...entry,
-                bulletPoints: entry.bulletPoints.slice(0, -1),
-              }
-            : entry,
+      if (piece.type === "summary") {
+        nextSummary = summaryText;
+      } else if (piece.type === "experience") {
+        if (experiences.some((entry) => entry.id === piece.id)) continue;
+        const source = draft.experiences.find((entry) => entry.id === piece.id);
+        if (!source) continue;
+        nextExperiences = upsertExperience(experiences, source, []);
+      } else if (piece.type === "bullet") {
+        const source = draft.experiences.find(
+          (entry) => entry.id === piece.experienceId,
         );
-        continue;
+        if (!source) continue;
+        const bullet = source.bulletPoints.find(
+          (entry) => entry.id === piece.bulletId,
+        );
+        if (!bullet) continue;
+        const current = experiences.find(
+          (entry) => entry.id === piece.experienceId,
+        );
+        if (current?.bulletPoints.some((entry) => entry.id === bullet.id)) {
+          continue;
+        }
+        nextExperiences = upsertExperience(experiences, source, [
+          ...(current?.bulletPoints ?? []),
+          bullet,
+        ]);
+      } else {
+        if (attributeSections.some((section) => section.id === piece.id)) {
+          continue;
+        }
+        const section = packedAttributes.find(
+          (entry) => entry.id === piece.id,
+        );
+        if (!section) continue;
+        nextAttributes = [...attributeSections, section];
       }
 
-      let worstIndex = 0;
-      for (let i = 1; i < experiences.length; i++) {
-        if (
-          compareFillPriority(
-            experiences[i],
-            experiences[worstIndex],
-            analysis,
-          ) < 0
-        ) {
-          worstIndex = i;
-        }
+      if (fits(nextExperiences, nextAttributes, nextSummary)) {
+        summary = nextSummary;
+        experiences = nextExperiences;
+        attributeSections = nextAttributes;
       }
-      experiences = experiences.filter((_, index) => index !== worstIndex);
     }
 
     return {
       ...draft,
+      summary,
+      summaryImportance,
       experiences: orderExperiencesForDisplay(experiences, analysis),
       attributeSections,
     };
@@ -664,8 +673,8 @@ function CvHeader({
       }
       style={{
         borderBottom: `2px solid ${C.border}`,
-        paddingBottom: "12px",
-        marginBottom: "16px",
+        paddingBottom: "4px",
+        marginBottom: "6px",
         cursor: onClick ? "pointer" : undefined,
       }}
     >
@@ -680,26 +689,27 @@ function CvHeader({
       >
         {cv.basics.name || "Full Name"}
       </h1>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "nowrap",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          fontSize: "9pt",
-          color: C.muted,
-          marginTop: "8px",
-          overflow: "hidden",
-          whiteSpace: "nowrap",
-          width: "100%",
-        }}
-      >
-        <span>{contacts.email}</span>
-        <span>{contacts.phone}</span>
-        <span>{contacts.linkedin}</span>
-        <span>{contacts.github}</span>
-        <span>{contacts.location}</span>
-      </div>
+      {contacts.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "nowrap",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            fontSize: "9pt",
+            color: C.muted,
+            marginTop: "2px",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            width: "100%",
+            gap: "8px",
+          }}
+        >
+          {contacts.map((contact, index) => (
+            <span key={`${index}-${contact}`}>{contact}</span>
+          ))}
+        </div>
+      )}
     </header>
   );
 }
@@ -731,7 +741,7 @@ function CvSummary({
           : undefined
       }
       style={{
-        marginBottom: "16px",
+        marginBottom: "12px",
         // Reserve ~3 lines of body text for the professional summary.
         minHeight: "calc(3 * 10pt * 1.4)",
         cursor: onClick ? "pointer" : undefined,
@@ -797,7 +807,7 @@ function CvExperienceBlock({
   atLabel?: string;
   onClick?: () => void;
 }) {
-  const titleText = entry.partTime ? `${entry.title} (part time)` : entry.title;
+  const titleText = formatTitleWithPartTime(entry.title, !!entry.partTime);
 
   return (
     <div
@@ -861,23 +871,23 @@ function CvExperienceBlock({
             paddingLeft: "20px",
           }}
         >
-          {entry.bulletPoints.map((bullet, i) => (
+          {entry.bulletPoints.map((bullet) => (
             <li
-              key={i}
+              key={bullet.id}
               style={{
                 fontSize: "10pt",
                 marginBottom: "2px",
                 color:
-                  isPlaceholder && bullet.startsWith("[")
+                  isPlaceholder && bullet.text.startsWith("[")
                     ? C.placeholder
                     : C.text,
                 fontStyle:
-                  isPlaceholder && bullet.startsWith("[")
+                  isPlaceholder && bullet.text.startsWith("[")
                     ? "italic"
                     : "normal",
               }}
             >
-              {bullet}
+              {bullet.text}
             </li>
           ))}
         </ul>

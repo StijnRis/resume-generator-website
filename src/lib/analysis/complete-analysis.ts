@@ -1,9 +1,12 @@
-import { getInterestIdMap, ATTRIBUTE_KEYS, EXPERIENCE_KEYS } from "@/lib/biography/inject-ids";
+import {
+  getAttributes,
+  getExperiences,
+} from "@/lib/biography/flat";
+import { applySkillListRules } from "@/lib/analysis/attribute-merges";
 import type {
   AttributeAnalysisItem,
   Biography,
-  BiographyCategoryKey,
-  CategoryAnalysisItem,
+  DynamicCategoryDefinition,
   ExperienceAnalysisItem,
   HighLevelAnalysis,
 } from "@/lib/types";
@@ -14,24 +17,22 @@ export const CODE_BACKFILL_REASON =
 export const CODE_CATEGORY_BACKFILL_REASON =
   "Added by code because the AI did not rank this category.";
 
-function completeCategoryAnalysis(
-  biography: Biography,
-  categoryAnalysis: CategoryAnalysisItem[],
-): CategoryAnalysisItem[] {
-  const present = new Set(categoryAnalysis.map((item) => item.category));
-  const completed = [...categoryAnalysis];
+function ensureCategoriesFromAssignments(
+  defined: DynamicCategoryDefinition[],
+  assignedIds: string[],
+): DynamicCategoryDefinition[] {
+  const present = new Set(defined.map((entry) => entry.id));
+  const completed = [...defined];
+  let nextOrder =
+    Math.max(0, ...completed.map((entry) => entry.order), 0) + 1;
 
-  for (const category of [...EXPERIENCE_KEYS, ...ATTRIBUTE_KEYS] as BiographyCategoryKey[]) {
-    const items = biography[category];
-    const hasItems =
-      category === "interests"
-        ? Array.isArray(biography.interests) && biography.interests.length > 0
-        : Array.isArray(items) && items.length > 0;
-
-    if (!hasItems || present.has(category)) continue;
+  for (const id of assignedIds) {
+    if (!id || present.has(id)) continue;
+    present.add(id);
     completed.push({
-      category,
-      relevance_score: 99,
+      id,
+      label: id,
+      order: nextOrder++,
       reason: CODE_CATEGORY_BACKFILL_REASON,
     });
   }
@@ -45,21 +46,20 @@ function completeExperienceAnalysis(
 ): ExperienceAnalysisItem[] {
   const present = new Set(experienceAnalysis.map((item) => item.id));
   const completed = [...experienceAnalysis];
+  const fallbackCategory =
+    experienceAnalysis[0]?.category ||
+    getExperiences(biography)[0]?.type ||
+    "experience";
 
-  for (const category of EXPERIENCE_KEYS) {
-    const items = biography[category];
-    if (!Array.isArray(items)) continue;
-
-    for (const item of items) {
-      if (!item.id || present.has(item.id)) continue;
-      completed.push({
-        category,
-        id: item.id,
-        relevance_score: 0,
-        suggested_bullet_points: 0,
-        reason: CODE_BACKFILL_REASON,
-      });
-    }
+  for (const item of getExperiences(biography)) {
+    if (!item.id || present.has(item.id)) continue;
+    completed.push({
+      category: fallbackCategory,
+      id: item.id,
+      relevance_score: 0,
+      bullets: [],
+      reason: CODE_BACKFILL_REASON,
+    });
   }
 
   return completed;
@@ -71,29 +71,16 @@ function completeAttributeAnalysis(
 ): AttributeAnalysisItem[] {
   const present = new Set(attributeAnalysis.map((item) => item.id));
   const completed = [...attributeAnalysis];
+  const fallbackCategory =
+    attributeAnalysis[0]?.category ||
+    getAttributes(biography)[0]?.type ||
+    "skills";
 
-  for (const category of ATTRIBUTE_KEYS) {
-    const items = biography[category];
-    if (!Array.isArray(items)) continue;
-
-    for (const item of items) {
-      const id = (item as { id?: string }).id;
-      if (!id || present.has(id)) continue;
-      completed.push({
-        category,
-        id,
-        relevance_score: 0,
-        reason: CODE_BACKFILL_REASON,
-      });
-    }
-  }
-
-  const interests = getInterestIdMap(biography);
-  for (const id of interests.keys()) {
-    if (present.has(id)) continue;
+  for (const item of getAttributes(biography)) {
+    if (!item.id || present.has(item.id)) continue;
     completed.push({
-      category: "interests",
-      id,
+      category: fallbackCategory,
+      id: item.id,
       relevance_score: 0,
       reason: CODE_BACKFILL_REASON,
     });
@@ -106,16 +93,29 @@ export function completeAnalysis(
   biography: Biography,
   analysis: HighLevelAnalysis,
 ): HighLevelAnalysis {
-  return {
+  const experience_analysis = completeExperienceAnalysis(
+    biography,
+    analysis.experience_analysis ?? [],
+  );
+  const attribute_analysis = completeAttributeAnalysis(
+    biography,
+    analysis.attribute_analysis ?? [],
+  );
+
+  const experience_categories = ensureCategoriesFromAssignments(
+    analysis.experience_categories ?? [],
+    experience_analysis.map((item) => item.category),
+  );
+  const attribute_categories = ensureCategoriesFromAssignments(
+    analysis.attribute_categories ?? [],
+    attribute_analysis.map((item) => item.category),
+  );
+
+  return applySkillListRules(biography, {
     ...analysis,
-    category_analysis: completeCategoryAnalysis(biography, analysis.category_analysis),
-    experience_analysis: completeExperienceAnalysis(
-      biography,
-      analysis.experience_analysis,
-    ),
-    attribute_analysis: completeAttributeAnalysis(
-      biography,
-      analysis.attribute_analysis,
-    ),
-  };
+    experience_categories,
+    attribute_categories,
+    experience_analysis,
+    attribute_analysis,
+  });
 }

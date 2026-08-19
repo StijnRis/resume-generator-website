@@ -20,10 +20,8 @@ import {
   englishUiLabelStrings,
   mergeUiLabels,
 } from "@/lib/formatting/ui-labels";
-import { CATEGORY_LABELS_FOR_CV } from "@/lib/cv/page-geometry";
 import type {
   Biography,
-  ExperienceCategoryKey,
   GeneratedCvTexts,
   HighLevelAnalysis,
   TranslationMapping,
@@ -99,12 +97,6 @@ export function uiLabelTranslationMappings(
   add(DEFAULT_UI_LABELS.starting, merged.starting);
   add(DEFAULT_UI_LABELS.expected, merged.expected);
 
-  for (const [key, english] of Object.entries(CATEGORY_LABELS_FOR_CV)) {
-    const localized =
-      merged.sectionTitles[key as ExperienceCategoryKey] ?? english;
-    add(english, localized);
-  }
-
   return out;
 }
 
@@ -125,8 +117,12 @@ export function collectTranslatableCvStrings(
   addString(values, labels.present);
   addString(values, labels.starting);
   addString(values, labels.expected);
-  for (const title of Object.values(labels.sectionTitles)) {
-    addString(values, title);
+
+  for (const def of [
+    ...(analysis.experience_categories ?? []),
+    ...(analysis.attribute_categories ?? []),
+  ]) {
+    addString(values, def.label);
   }
 
   addString(values, texts.summary);
@@ -134,8 +130,11 @@ export function collectTranslatableCvStrings(
     addString(values, entry.title);
     addString(values, entry.organization);
     addString(values, entry.location);
+    addString(values, entry.dateRange);
     addString(values, entry.summary);
-    for (const bullet of entry.bullet_points ?? []) addString(values, bullet);
+    for (const bullet of Object.values(entry.bullets ?? {})) {
+      addString(values, bullet);
+    }
   }
   for (const entry of Object.values(texts.attributes ?? {})) {
     addString(values, entry.title);
@@ -162,15 +161,18 @@ export function applyTranslationMappings(
 
   const experiences: GeneratedCvTexts["experiences"] = {};
   for (const [id, entry] of Object.entries(texts.experiences ?? {})) {
+    const bullets: Record<string, string> = {};
+    for (const [bulletId, bullet] of Object.entries(entry.bullets ?? {})) {
+      bullets[bulletId] = t(bullet) ?? bullet;
+    }
     experiences[id] = {
       ...entry,
       title: t(entry.title),
       organization: t(entry.organization),
       location: t(entry.location),
+      dateRange: t(entry.dateRange),
       summary: t(entry.summary) ?? "",
-      bullet_points: (entry.bullet_points ?? []).map(
-        (bullet) => t(bullet) ?? bullet,
-      ),
+      bullets,
     };
   }
 

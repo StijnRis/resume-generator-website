@@ -6,6 +6,14 @@
     "basics": { "$ref": "#/definitions/Basics" },
     "label": { "type": "string" },
     "summary": { "type": "string" },
+    "experiences": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/FlatExperience" }
+    },
+    "attributes": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/FlatAttribute" }
+    },
     "work": { "type": "array", "items": { "$ref": "#/definitions/WorkExperience" } },
     "education": { "type": "array", "items": { "$ref": "#/definitions/EducationExperience" } },
     "volunteer": { "type": "array", "items": { "$ref": "#/definitions/VolunteerExperience" } },
@@ -40,6 +48,64 @@
   "required": ["basics", "label", "summary"],
   "additionalProperties": false,
   "definitions": {
+    "FlatExperience": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "start_date": { "type": "string" },
+        "end_date": { "type": ["string", "null"] },
+        "location": { "type": "string" },
+        "organization": { "type": "string" },
+        "position": { "type": "string" },
+        "role": { "type": "string" },
+        "degree": { "type": "string" },
+        "area": { "type": "string" },
+        "grade": { "type": ["number", "null"] },
+        "grade_scale": { "type": ["number", "null"] },
+        "hours_per_week": { "type": ["number", "null"] },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "highlights": { "type": "array", "items": { "type": "string" } },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "roles": { "type": "array", "items": { "type": "string" } },
+        "project_type": { "type": ["string", "null"] },
+        "goal": { "type": "string" },
+        "reference": { "type": "string" },
+        "courses": { "type": "array" }
+      },
+      "required": ["type", "title", "start_date", "location"],
+      "additionalProperties": true
+    },
+    "FlatAttribute": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "value": { "type": "string" },
+        "level": { "type": "string" },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "language": { "type": "string" },
+        "fluency": { "type": "string" },
+        "date": { "type": "string" },
+        "issuer": { "type": "string" },
+        "awarder": { "type": "string" },
+        "publisher": { "type": "string" },
+        "release_date": { "type": "string" },
+        "reference": { "type": "string" },
+        "position": { "type": "string" },
+        "contact": { "type": "string" },
+        "url": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "highlights": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["type"],
+      "additionalProperties": true
+    },
     "Contact": {
       "type": "object",
       "properties": {

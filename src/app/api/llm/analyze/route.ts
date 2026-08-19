@@ -3,8 +3,11 @@ import { NextResponse } from "next/server";
 import { logRouteError } from "@/lib/api/log-error";
 import { completeAnalysis } from "@/lib/analysis/complete-analysis";
 import { applyEducationPriority } from "@/lib/analysis/education-priority";
+import { applyInterestPriority } from "@/lib/analysis/interest-priority";
 import { normalizeAnalysis } from "@/lib/analysis/experience-score";
 import { expandAnalysisForPageBudget } from "@/lib/analysis/page-budget";
+import { ensureSkillsFromDocument } from "@/lib/biography/harvest-skills";
+import { injectBiographyIds } from "@/lib/biography/inject-ids";
 import { buildAnalyzeUserPayload } from "@/lib/biography/llm-payload";
 import { callLlm, extractJsonFromResponse } from "@/lib/llm/server";
 import { ANALYSIS_PROMPT } from "@/lib/llm/prompts";
@@ -37,9 +40,12 @@ export async function POST(request: Request) {
     }
 
     const pageCountClamped = Math.min(5, Math.max(1, pageCount ?? 2));
+    const biographyWithSkills = await injectBiographyIds(
+      ensureSkillsFromDocument(biography),
+    );
     const userPayload = buildAnalyzeUserPayload(
       jobDescription,
-      biography,
+      biographyWithSkills,
       pageCountClamped,
     );
 
@@ -56,7 +62,7 @@ export async function POST(request: Request) {
         string,
         unknown
       >,
-      temperature: 0.3,
+      temperature: 0,
     });
 
     const parsed = extractJsonFromResponse(llmResponse.content);
@@ -80,10 +86,13 @@ export async function POST(request: Request) {
 
     const llmAnalysis = normalizeAnalysis(validation.data!);
     const completed = expandAnalysisForPageBudget(
-      biography,
-      applyEducationPriority(
-        biography,
-        completeAnalysis(biography, llmAnalysis),
+      biographyWithSkills,
+      applyInterestPriority(
+        biographyWithSkills,
+        applyEducationPriority(
+          biographyWithSkills,
+          completeAnalysis(biographyWithSkills, llmAnalysis),
+        ),
       ),
       pageCountClamped,
     );

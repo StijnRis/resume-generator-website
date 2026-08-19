@@ -1,7 +1,3 @@
-import { CATEGORY_LABELS_FOR_CV } from "@/lib/cv/page-geometry";
-import type { ExperienceCategoryKey } from "@/lib/types";
-
-/** Short month labels by ISO 639-3 code. */
 const MONTHS: Record<string, string[]> = {
   eng: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   nld: ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"],
@@ -18,7 +14,7 @@ export interface CvUiLabels {
   present: string;
   starting: string;
   expected: string;
-  sectionTitles: Partial<Record<ExperienceCategoryKey, string>>;
+  sectionTitles: Record<string, string>;
 }
 
 export const DEFAULT_UI_LABELS: CvUiLabels = {
@@ -27,7 +23,7 @@ export const DEFAULT_UI_LABELS: CvUiLabels = {
   present: "present",
   starting: "Starting",
   expected: "exp.",
-  sectionTitles: { ...CATEGORY_LABELS_FOR_CV } as CvUiLabels["sectionTitles"],
+  sectionTitles: {},
 };
 
 /** English source strings to send through the translate API. */
@@ -38,7 +34,6 @@ export function englishUiLabelStrings(): string[] {
     DEFAULT_UI_LABELS.present,
     DEFAULT_UI_LABELS.starting,
     DEFAULT_UI_LABELS.expected,
-    ...Object.values(CATEGORY_LABELS_FOR_CV),
   ];
 }
 
@@ -67,7 +62,7 @@ export function applyMapToUiLabels(
   const sectionTitles: CvUiLabels["sectionTitles"] = {};
   for (const [key, value] of Object.entries(labels.sectionTitles)) {
     if (value) {
-      sectionTitles[key as ExperienceCategoryKey] = t(value);
+      sectionTitles[key] = t(value);
     }
   }
   return {

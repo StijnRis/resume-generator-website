@@ -3,15 +3,13 @@
 import { useMemo, useState } from "react";
 
 import {
+  attributeTypeOrder,
+  experienceTypeOrder,
   extractAttributeCards,
   extractExperienceCards,
 } from "@/lib/biography/cards";
 import type { Biography } from "@/lib/types";
-import {
-  ATTRIBUTE_CATEGORIES,
-  CATEGORY_LABELS,
-  EXPERIENCE_CATEGORIES,
-} from "@/lib/types";
+import { sourceTypeLabel } from "@/lib/types";
 
 interface BiographyCardsProps {
   biography: Biography;
@@ -32,7 +30,7 @@ function groupCardsByCategory<T extends { category: string }>(
     .filter((category) => (byCategory.get(category)?.length ?? 0) > 0)
     .map((category) => ({
       category,
-      label: CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] ?? category,
+      label: sourceTypeLabel(category),
       cards: byCategory.get(category) ?? [],
     }));
 }
@@ -48,12 +46,13 @@ export function BiographyCards({ biography }: BiographyCardsProps) {
   );
 
   const experienceGroups = useMemo(
-    () => groupCardsByCategory(experienceCards, EXPERIENCE_CATEGORIES),
-    [experienceCards],
+    () =>
+      groupCardsByCategory(experienceCards, experienceTypeOrder(biography)),
+    [biography, experienceCards],
   );
   const attributeGroups = useMemo(
-    () => groupCardsByCategory(attributeCards, ATTRIBUTE_CATEGORIES),
-    [attributeCards],
+    () => groupCardsByCategory(attributeCards, attributeTypeOrder(biography)),
+    [biography, attributeCards],
   );
 
   if (experienceCards.length === 0 && attributeCards.length === 0) {

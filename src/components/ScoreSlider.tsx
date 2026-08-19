@@ -75,6 +75,12 @@ export function ScoreSlider({
     />
   );
 
+  const reasonEl = reason ? (
+    <p className="text-xs text-zinc-500 leading-snug whitespace-pre-wrap">
+      {reason}
+    </p>
+  ) : null;
+
   if (side) {
     return (
       <div className="space-y-0.5">
@@ -85,11 +91,7 @@ export function ScoreSlider({
           </span>
         </div>
         {rangeInput}
-        {reason && (
-          <p className="relative text-xs text-zinc-500 leading-snug line-clamp-2 hover:z-20 hover:line-clamp-none hover:rounded hover:bg-white hover:px-1.5 hover:py-1 hover:shadow-md hover:ring-1 hover:ring-zinc-200">
-            {reason}
-          </p>
-        )}
+        {reasonEl}
       </div>
     );
   }
@@ -115,11 +117,7 @@ export function ScoreSlider({
           </span>
           {rangeInput}
         </div>
-        {reason && (
-          <p className="relative text-xs text-zinc-500 leading-snug line-clamp-1 hover:z-20 hover:line-clamp-none hover:rounded hover:bg-white hover:px-1.5 hover:py-1 hover:shadow-md hover:ring-1 hover:ring-zinc-200">
-            {reason}
-          </p>
-        )}
+        {reasonEl}
       </div>
     );
   }
@@ -131,7 +129,7 @@ export function ScoreSlider({
         <span className="text-sm font-bold text-blue-600">{displayLabel}</span>
       </div>
       {rangeInput}
-      {reason && <p className="text-xs text-zinc-500">{reason}</p>}
+      {reasonEl}
     </div>
   );
 }

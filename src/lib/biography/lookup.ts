@@ -1,71 +1,52 @@
 import type {
   AttributeAnalysisItem,
-  AttributeCategoryKey,
   Biography,
+  BiographyAttribute,
+  BiographyExperience,
+  DynamicCategoryDefinition,
   ExperienceAnalysisItem,
-  ExperienceCategoryKey,
   HighLevelAnalysis,
 } from "@/lib/types";
-import { ATTRIBUTE_CATEGORIES, CATEGORY_LABELS, EXPERIENCE_CATEGORIES } from "@/lib/types";
-import { getInterestIdMap } from "@/lib/biography/inject-ids";
+import { sourceTypeLabel } from "@/lib/types";
+import {
+  getAttributeById,
+  getExperienceById,
+  getExperiences,
+  getAttributes,
+} from "@/lib/biography/flat";
 
 export function getExperienceItemById(
   biography: Biography,
-  category: ExperienceCategoryKey,
+  _category: string,
   id: string,
 ): Record<string, unknown> | null {
-  const items = biography[category];
-  if (Array.isArray(items)) {
-    const found = items.find((item) => item.id === id);
-    if (found) return found as unknown as Record<string, unknown>;
-  }
-
-  for (const key of EXPERIENCE_CATEGORIES) {
-    if (key === category) continue;
-    const categoryItems = biography[key];
-    if (!Array.isArray(categoryItems)) continue;
-    const found = categoryItems.find((item) => item.id === id);
-    if (found) return found as unknown as Record<string, unknown>;
-  }
-
-  return null;
+  const found = getExperienceById(biography, id);
+  return found ? (found as unknown as Record<string, unknown>) : null;
 }
 
 export function getAttributeItemById(
   biography: Biography,
-  category: AttributeCategoryKey,
+  _category: string,
   id: string,
 ): unknown | null {
-  if (category === "interests") {
-    const map = getInterestIdMap(biography);
-    const value = map.get(id);
-    return value ?? null;
-  }
+  return getAttributeById(biography, id);
+}
 
-  const items = biography[category];
-  if (Array.isArray(items)) {
-    const found = items.find((item) => (item as { id?: string }).id === id);
-    if (found) return found;
-  }
-
-  for (const key of ATTRIBUTE_CATEGORIES) {
-    if (key === category || key === "interests") continue;
-    const categoryItems = biography[key];
-    if (!Array.isArray(categoryItems)) continue;
-    const found = categoryItems.find((item) => (item as { id?: string }).id === id);
-    if (found) return found;
-  }
-
-  return null;
+function experienceSourceType(
+  item: Record<string, unknown> | BiographyExperience | null,
+): string {
+  if (!item) return "";
+  return String((item as { type?: string }).type ?? "");
 }
 
 export function getExperienceRole(
   item: Record<string, unknown> | null,
-  category: ExperienceCategoryKey,
+  category?: string,
 ): string {
   if (!item) return "Unknown";
+  const type = category || experienceSourceType(item);
 
-  switch (category) {
+  switch (type) {
     case "work":
       return String(item.position ?? item.title ?? "Role");
     case "education":
@@ -75,7 +56,6 @@ export function getExperienceRole(
     case "projects":
       return String(item.title ?? "Project");
     case "research":
-      // Research title is the research goal/topic, not the person's role.
       return String(item.goal ?? item.title ?? item.summary ?? "Research");
     default:
       return String(item.title ?? "Experience");
@@ -84,7 +64,7 @@ export function getExperienceRole(
 
 export function getExperienceOrganization(
   item: Record<string, unknown> | null,
-  _category: ExperienceCategoryKey,
+  _category?: string,
 ): string {
   if (!item) return "";
   return String(item.organization ?? "");
@@ -98,28 +78,36 @@ export function isPartTimeExperience(
   return typeof hours === "number" && hours > 0 && hours < 40;
 }
 
+export const PART_TIME_LABEL = "(Part-time)";
+
+/** Append a single "(Part-time)" suffix; strip any existing part-time marker first. */
+export function formatTitleWithPartTime(
+  title: string,
+  partTime: boolean,
+): string {
+  const cleaned = title.replace(/\s*\(part[-\s]?time\)\s*$/i, "").trim();
+  return partTime ? `${cleaned} ${PART_TIME_LABEL}` : cleaned;
+}
+
 export function getExperienceDisplayName(
   item: Record<string, unknown> | null,
-  category: ExperienceCategoryKey,
+  category?: string,
 ): string {
   if (!item) return "Unknown";
 
-  const role = getExperienceRole(item, category);
-  const organization = getExperienceOrganization(item, category);
-  const partTime = isPartTimeExperience(item)
-    ? " (part time)"
-    : "";
+  const type = category || experienceSourceType(item);
+  const role = getExperienceRole(item, type);
+  const organization = getExperienceOrganization(item, type);
+  const partTime = isPartTimeExperience(item) ? ` ${PART_TIME_LABEL}` : "";
 
-  switch (category) {
+  switch (type) {
     case "work":
     case "volunteer":
       return organization
         ? `${role}${partTime} at ${organization}`
         : `${role}${partTime}`;
     case "education":
-      return organization ? `${role} — ${organization}` : role;
     case "projects":
-      return organization ? `${role} — ${organization}` : role;
     case "research":
       return organization ? `${role} — ${organization}` : role;
     default:
@@ -129,22 +117,29 @@ export function getExperienceDisplayName(
 
 export function getAttributeDisplayName(
   item: unknown,
-  category: AttributeCategoryKey,
+  category?: string,
 ): string {
-  if (category === "interests") {
+  const type =
+    category ||
+    (item && typeof item === "object"
+      ? String((item as BiographyAttribute).type ?? "")
+      : "");
+
+  if (type === "interests") {
     if (typeof item === "string") return item;
-    if (item && typeof item === "object" && "value" in item) {
-      return String((item as { value?: string }).value ?? "");
+    if (item && typeof item === "object") {
+      const obj = item as BiographyAttribute;
+      return String(obj.value ?? obj.name ?? "");
     }
     return String(item);
   }
   if (!item || typeof item !== "object") return "Unknown";
 
-  const obj = item as Record<string, unknown>;
-  switch (category) {
+  const obj = item as BiographyAttribute;
+  switch (type) {
     case "skills":
     case "tools":
-      return String(obj.name ?? (category === "tools" ? "Tool" : "Skill"));
+      return String(obj.name ?? (type === "tools" ? "Tool" : "Skill"));
     case "certificates":
       return String(obj.name ?? "Certificate");
     case "awards":
@@ -156,47 +151,59 @@ export function getAttributeDisplayName(
     case "languages":
       return `${obj.language ?? "Language"} (${obj.fluency ?? "unknown"})`;
     default:
-      return "Item";
+      return String(obj.name ?? obj.title ?? obj.value ?? "Item");
   }
 }
 
-/** Label used on the left of an Attributes row (e.g. "Technologies"). */
 export function getAttributeRowLabel(
   item: unknown,
-  category: AttributeCategoryKey,
+  category?: string,
 ): string {
-  if (category === "skills" && item && typeof item === "object") {
-    const obj = item as { name?: string; keywords?: unknown };
+  const type =
+    category ||
+    (item && typeof item === "object"
+      ? String((item as BiographyAttribute).type ?? "")
+      : "");
+
+  if (type === "skills" && item && typeof item === "object") {
+    const obj = item as BiographyAttribute;
     const name = String(obj.name ?? "").trim();
     const keywords = Array.isArray(obj.keywords)
       ? obj.keywords.map(String).filter(Boolean)
       : [];
     if (keywords.length > 0 && name) return name;
-    return CATEGORY_LABELS.skills;
+    return sourceTypeLabel("skills");
   }
-  if (category === "tools") {
-    return CATEGORY_LABELS.tools;
-  }
-  return CATEGORY_LABELS[category] ?? category;
+  if (type === "tools") return sourceTypeLabel("tools");
+  return sourceTypeLabel(type || "skills");
 }
 
-/** Items listed after the row label. */
 export function getAttributeRowItems(
   item: unknown,
-  category: AttributeCategoryKey,
+  category?: string,
 ): string[] {
-  if (category === "interests") {
+  const type =
+    category ||
+    (item && typeof item === "object"
+      ? String((item as BiographyAttribute).type ?? "")
+      : "");
+
+  if (type === "interests") {
     if (typeof item === "string") return [item];
-    if (item && typeof item === "object" && "value" in item) {
-      const value = String((item as { value?: string }).value ?? "").trim();
+    if (item && typeof item === "object") {
+      const value = String(
+        (item as BiographyAttribute).value ??
+          (item as BiographyAttribute).name ??
+          "",
+      ).trim();
       return value ? [value] : [];
     }
     return [String(item)];
   }
   if (!item || typeof item !== "object") return [];
 
-  const obj = item as Record<string, unknown>;
-  if (category === "skills") {
+  const obj = item as BiographyAttribute;
+  if (type === "skills") {
     const keywords = Array.isArray(obj.keywords)
       ? obj.keywords.map(String).filter(Boolean)
       : [];
@@ -205,65 +212,111 @@ export function getAttributeRowItems(
     return name ? [name] : [];
   }
 
-  if (category === "tools") {
+  if (type === "tools") {
     const name = String(obj.name ?? "").trim();
     return name ? [name] : [];
   }
 
-  const label = getAttributeDisplayName(item, category);
+  const label = getAttributeDisplayName(item, type);
   return label && label !== "Unknown" ? [label] : [];
 }
 
-export function groupExperienceAnalysis(
+export function getExperienceCategoryDefs(
   analysis: HighLevelAnalysis,
-): Map<ExperienceCategoryKey, ExperienceAnalysisItem[]> {
-  const map = new Map<ExperienceCategoryKey, ExperienceAnalysisItem[]>();
-
-  for (const cat of EXPERIENCE_CATEGORIES) {
-    map.set(cat, []);
-  }
-
-  for (const item of analysis.experience_analysis) {
-    const list = map.get(item.category) ?? [];
-    list.push(item);
-    map.set(item.category, list);
-  }
-
-  return map;
+): DynamicCategoryDefinition[] {
+  return analysis.experience_categories ?? [];
 }
 
-export function groupAttributeAnalysis(
+export function getAttributeCategoryDefs(
   analysis: HighLevelAnalysis,
-): Map<AttributeCategoryKey, AttributeAnalysisItem[]> {
-  const map = new Map<AttributeCategoryKey, AttributeAnalysisItem[]>();
-
-  for (const cat of ATTRIBUTE_CATEGORIES) {
-    map.set(cat, []);
-  }
-
-  for (const item of analysis.attribute_analysis) {
-    const list = map.get(item.category) ?? [];
-    list.push(item);
-    map.set(item.category, list);
-  }
-
-  return map;
+): DynamicCategoryDefinition[] {
+  return analysis.attribute_categories ?? [];
 }
 
 export function getCategoryOrder(
   analysis: HighLevelAnalysis,
   category: string,
 ): number {
-  const found = analysis.category_analysis.find((c) => c.category === category);
-  return found?.relevance_score ?? 99;
+  const fromExp = getExperienceCategoryDefs(analysis).find(
+    (entry) => entry.id === category || entry.label === category,
+  );
+  if (fromExp) return fromExp.order;
+  const fromAttr = getAttributeCategoryDefs(analysis).find(
+    (entry) => entry.id === category || entry.label === category,
+  );
+  if (fromAttr) return fromAttr.order;
+  return 99;
+}
+
+export function getCategoryLabel(
+  analysis: HighLevelAnalysis,
+  category: string,
+): string {
+  const fromExp = getExperienceCategoryDefs(analysis).find(
+    (entry) => entry.id === category || entry.label === category,
+  );
+  if (fromExp?.label) return fromExp.label;
+  const fromAttr = getAttributeCategoryDefs(analysis).find(
+    (entry) => entry.id === category || entry.label === category,
+  );
+  if (fromAttr?.label) return fromAttr.label;
+  return sourceTypeLabel(category);
 }
 
 export function getCategoryReason(
   analysis: HighLevelAnalysis,
   category: string,
 ): string {
-  const found = analysis.category_analysis.find((c) => c.category === category);
-  return found?.reason ?? "";
+  const fromExp = getExperienceCategoryDefs(analysis).find(
+    (entry) => entry.id === category || entry.label === category,
+  );
+  if (fromExp) return fromExp.reason;
+  const fromAttr = getAttributeCategoryDefs(analysis).find(
+    (entry) => entry.id === category || entry.label === category,
+  );
+  return fromAttr?.reason ?? "";
 }
 
-export { CATEGORY_LABELS };
+export function groupExperienceAnalysis(
+  analysis: HighLevelAnalysis,
+): Map<string, ExperienceAnalysisItem[]> {
+  const map = new Map<string, ExperienceAnalysisItem[]>();
+  for (const def of getExperienceCategoryDefs(analysis)) {
+    map.set(def.id, []);
+  }
+  for (const item of analysis.experience_analysis) {
+    const list = map.get(item.category) ?? [];
+    list.push(item);
+    map.set(item.category, list);
+  }
+  return map;
+}
+
+export function groupAttributeAnalysis(
+  analysis: HighLevelAnalysis,
+): Map<string, AttributeAnalysisItem[]> {
+  const map = new Map<string, AttributeAnalysisItem[]>();
+  for (const def of getAttributeCategoryDefs(analysis)) {
+    map.set(def.id, []);
+  }
+  for (const item of analysis.attribute_analysis) {
+    const list = map.get(item.category) ?? [];
+    list.push(item);
+    map.set(item.category, list);
+  }
+  return map;
+}
+
+export function listBiographyExperienceIds(biography: Biography): string[] {
+  return getExperiences(biography)
+    .map((item) => item.id)
+    .filter((id): id is string => Boolean(id));
+}
+
+export function listBiographyAttributeIds(biography: Biography): string[] {
+  return getAttributes(biography)
+    .map((item) => item.id)
+    .filter((id): id is string => Boolean(id));
+}
+
+export { CATEGORY_LABELS } from "@/lib/types";

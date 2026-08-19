@@ -1,3 +1,9 @@
+import {
+  CV_PAGE_HEIGHT_MM,
+  CV_PAGE_PADDING_MM,
+  CV_PAGE_WIDTH_MM,
+} from "@/lib/cv/page-geometry";
+
 export async function downloadCvPdf(
   element: HTMLElement,
   filename: string,
@@ -19,14 +25,14 @@ export async function downloadCvPdf(
       background: #ffffff;
     }
     .cv-document {
-      width: 210mm;
+      width: ${CV_PAGE_WIDTH_MM}mm;
       margin: 0 auto;
     }
     .cv-page {
-      width: 210mm;
-      height: 297mm;
-      max-height: 297mm;
-      padding: 15mm;
+      width: ${CV_PAGE_WIDTH_MM}mm;
+      height: ${CV_PAGE_HEIGHT_MM}mm;
+      max-height: ${CV_PAGE_HEIGHT_MM}mm;
+      padding: ${CV_PAGE_PADDING_MM}mm;
       box-sizing: border-box;
       margin: 0 !important;
       box-shadow: none !important;

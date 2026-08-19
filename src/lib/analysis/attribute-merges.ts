@@ -1,8 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
 
 import {
+  getAttributeCategoryDefs,
   getAttributeDisplayName,
   getAttributeItemById,
+  getCategoryLabel,
 } from "@/lib/biography/lookup";
 import type {
   AttributeAnalysisItem,
@@ -10,7 +12,6 @@ import type {
   Biography,
   HighLevelAnalysis,
 } from "@/lib/types";
-import { CATEGORY_LABELS } from "@/lib/types";
 
 export type CvAttributeUnit =
   | { type: "single"; item: AttributeAnalysisItem }
@@ -84,6 +85,35 @@ export function getAttributeUnitImportance(unit: CvAttributeUnit): number {
   return unit.item.relevance_score;
 }
 
+/**
+ * Include an attribute category only when its highest score is higher than
+ * at least one other included attribute item, or it ties the global max.
+ * Sole category is always kept.
+ */
+export function shouldIncludeAttributeCategory(
+  analysis: HighLevelAnalysis,
+  category: string,
+): boolean {
+  const included = analysis.attribute_analysis.filter(
+    (item) => item.relevance_score > 0,
+  );
+  const inCategory = included.filter((item) => item.category === category);
+  if (inCategory.length === 0) return false;
+
+  const maxInCategory = Math.max(
+    ...inCategory.map((item) => item.relevance_score),
+  );
+  const others = included.filter((item) => item.category !== category);
+  if (others.length === 0) return true;
+
+  if (others.some((item) => maxInCategory > item.relevance_score)) {
+    return true;
+  }
+
+  const globalMax = Math.max(...included.map((item) => item.relevance_score));
+  return maxInCategory >= globalMax;
+}
+
 export function addAttributeMergeGroup(
   analysis: HighLevelAnalysis,
   memberIds: string[],
@@ -97,6 +127,11 @@ export function addAttributeMergeGroup(
     .filter((item): item is AttributeAnalysisItem => item != null);
   if (members.length < 2) return analysis;
 
+  let next = analysis;
+  for (const memberId of unique) {
+    next = removeMemberFromAttributeMerges(next, memberId);
+  }
+
   const group: AttributeMergeGroup = {
     id: uuidv4(),
     category: category ?? members[0].category,
@@ -105,9 +140,23 @@ export function addAttributeMergeGroup(
   };
 
   return {
-    ...analysis,
-    attribute_merges: [...(analysis.attribute_merges ?? []), group],
+    ...next,
+    attribute_merges: [...(next.attribute_merges ?? []), group],
   };
+}
+
+export function removeMemberFromAttributeMerges(
+  analysis: HighLevelAnalysis,
+  memberId: string,
+): HighLevelAnalysis {
+  const merges = (analysis.attribute_merges ?? [])
+    .map((group) => ({
+      ...group,
+      member_ids: group.member_ids.filter((id) => id !== memberId),
+    }))
+    .filter((group) => group.member_ids.length >= 2);
+
+  return { ...analysis, attribute_merges: merges };
 }
 
 export function removeAttributeMergeGroup(
@@ -154,12 +203,446 @@ export function getAttributeMergeLabel(
 }
 
 export function defaultAttributeSectionTitle(
+  analysis: HighLevelAnalysis,
   unit: CvAttributeUnit,
 ): string {
   if (unit.type === "merged") {
     if (unit.group.title?.trim()) return unit.group.title.trim();
     const cat = unit.group.category ?? unit.items[0]?.category;
-    return cat ? CATEGORY_LABELS[cat] ?? cat : "Attributes";
+    return cat ? getCategoryLabel(analysis, cat) : "Attributes";
   }
-  return CATEGORY_LABELS[unit.item.category] ?? unit.item.category;
+  return getCategoryLabel(analysis, unit.item.category);
+}
+
+function normalizeAttributeName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[._/\-]+/g, " ")
+    .replace(/\b(js|ts)\b/g, (match) =>
+      match === "js" ? "javascript" : "typescript",
+    )
+    .replace(/\breact\.?js\b/g, "react")
+    .replace(/\bnode\.?js\b/g, "node")
+    .replace(/\bamazon web services\b/g, "aws")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const ATTRIBUTE_FAMILY_PATTERNS: { family: string; pattern: RegExp }[] = [
+  { family: "cloud", pattern: /\b(aws|azure|gcp|cloud)\b/i },
+  {
+    family: "frontend",
+    pattern: /\b(react|vue|angular|svelte|next|frontend|css|html|tailwind)\b/i,
+  },
+  {
+    family: "backend",
+    pattern: /\b(node|django|flask|spring|express|backend|fastapi)\b/i,
+  },
+  {
+    family: "data",
+    pattern: /\b(sql|postgres|mysql|mongo|spark|pandas|numpy|etl|data)\b/i,
+  },
+  {
+    family: "devops",
+    pattern: /\b(docker|kubernetes|k8s|terraform|ci|cd|devops|jenkins)\b/i,
+  },
+  {
+    family: "languages",
+    pattern:
+      /\b(python|java|typescript|javascript|c\+\+|golang|go|rust|kotlin|swift)\b/i,
+  },
+];
+
+function attributeSimilarityKey(
+  biography: Biography,
+  item: AttributeAnalysisItem,
+): string | null {
+  if (item.category !== "skills" && item.category !== "tools") {
+    const source = getAttributeItemById(biography, item.category, item.id);
+    const type =
+      source && typeof source === "object"
+        ? String((source as { type?: string }).type ?? "")
+        : "";
+    if (type !== "skills" && type !== "tools") return null;
+  }
+  if (item.relevance_score <= 0) return null;
+
+  const source = getAttributeItemById(biography, item.category, item.id);
+  const name = normalizeAttributeName(
+    getAttributeDisplayName(source, item.category),
+  );
+  if (!name || name.length < 2) return null;
+
+  for (const entry of ATTRIBUTE_FAMILY_PATTERNS) {
+    if (entry.pattern.test(name)) {
+      return `family|${item.category}|${entry.family}`;
+    }
+  }
+
+  // Aggressive near-duplicate key: first token (≥3 chars) within category.
+  const token = name.split(" ").find((part) => part.length >= 3);
+  if (token) return `token|${item.category}|${token}`;
+
+  return `exact|${item.category}|${name}`;
+}
+
+function tokenizeAttributeName(value: string): string[] {
+  return normalizeAttributeName(value)
+    .split(" ")
+    .filter((token) => token.length > 0);
+}
+
+/** True when one name's words are all present in the other (e.g. Mentorship ⊂ Technical Mentorship). */
+function namesNearDuplicate(a: string, b: string): boolean {
+  const left = tokenizeAttributeName(a);
+  const right = tokenizeAttributeName(b);
+  if (left.length === 0 || right.length === 0) return false;
+  if (left.join(" ") === right.join(" ")) return true;
+  const [shorter, longer] =
+    left.length <= right.length ? [left, right] : [right, left];
+  if (shorter.every((token) => token.length < 2)) return false;
+  const longerSet = new Set(longer);
+  return shorter.every((token) => longerSet.has(token));
+}
+
+const STANDALONE_SOFT_SKILLS = new Set([
+  "communication",
+  "communications",
+  "teamwork",
+  "team work",
+  "team player",
+  "leadership",
+  "problem solving",
+  "adaptability",
+  "time management",
+  "creativity",
+  "collaboration",
+  "interpersonal",
+  "interpersonal skills",
+  "critical thinking",
+  "attention to detail",
+  "work ethic",
+  "organization",
+  "organizational skills",
+  "organisational skills",
+  "flexibility",
+  "motivation",
+  "self motivation",
+  "empathy",
+  "conflict resolution",
+  "presentation skills",
+  "listening",
+  "active listening",
+  "negotiation",
+  "positive attitude",
+  "multitasking",
+  "reliability",
+  "punctuality",
+  "patience",
+  "integrity",
+  "professionalism",
+]);
+
+function isSkillOrToolAttribute(
+  biography: Biography,
+  item: AttributeAnalysisItem,
+): boolean {
+  const source = getAttributeItemById(biography, item.category, item.id);
+  const type =
+    source && typeof source === "object"
+      ? String((source as { type?: string }).type ?? item.category)
+      : item.category;
+  return type === "skills" || type === "tools";
+}
+
+function isSoftSkillsCategory(label: string): boolean {
+  return /\bsoft\b/i.test(label);
+}
+
+function isTechnicalSkillsCategory(label: string): boolean {
+  if (isSoftSkillsCategory(label)) return false;
+  return (
+    /\btechnical\b|\btools?\b|\bhard\b/i.test(label) || /^skills$/i.test(label)
+  );
+}
+
+const SOFT_SKILLS_LABEL = "Soft Skills";
+
+function relocateStandaloneSoftSkills(
+  biography: Biography,
+  analysis: HighLevelAnalysis,
+): HighLevelAnalysis {
+  const toMove = analysis.attribute_analysis.filter((item) => {
+    if (!isSkillOrToolAttribute(biography, item)) return false;
+    if (item.relevance_score <= 0) return false;
+    if (isSoftSkillsCategory(item.category)) return false;
+    if (!isTechnicalSkillsCategory(item.category) && item.category !== "skills") {
+      return false;
+    }
+    const name = normalizeAttributeName(
+      getAttributeDisplayName(
+        getAttributeItemById(biography, item.category, item.id),
+        item.category,
+      ),
+    );
+    return STANDALONE_SOFT_SKILLS.has(name);
+  });
+  if (toMove.length === 0) return analysis;
+
+  const existingSoft = analysis.attribute_categories.find((entry) =>
+    isSoftSkillsCategory(entry.label || entry.id),
+  );
+  const softLabel = existingSoft?.label || SOFT_SKILLS_LABEL;
+  const attribute_categories = existingSoft
+    ? analysis.attribute_categories
+    : [
+        ...analysis.attribute_categories,
+        {
+          id: softLabel,
+          label: softLabel,
+          order:
+            Math.max(
+              0,
+              ...analysis.attribute_categories.map((entry) => entry.order),
+            ) + 1,
+          reason: "Interpersonal skills kept separate from technical skills.",
+        },
+      ];
+
+  const moveIds = new Set(toMove.map((item) => item.id));
+  return {
+    ...analysis,
+    attribute_categories,
+    attribute_analysis: analysis.attribute_analysis.map((item) =>
+      moveIds.has(item.id)
+        ? {
+            ...item,
+            category: softLabel,
+            reason: item.reason.includes("Soft Skills")
+              ? item.reason
+              : `${item.reason} (Moved to Soft Skills.)`.trim(),
+          }
+        : item,
+    ),
+  };
+}
+
+/**
+ * Merge skills/tools whose names share the same words (token subset).
+ * Keep the more general (shortest) name and the highest relevance in the group.
+ */
+function collapseContainedAttributeDuplicates(
+  biography: Biography,
+  analysis: HighLevelAnalysis,
+): HighLevelAnalysis {
+  const candidates = analysis.attribute_analysis.filter(
+    (item) =>
+      item.relevance_score > 0 && isSkillOrToolAttribute(biography, item),
+  );
+  if (candidates.length < 2) return analysis;
+
+  const parent = new Map<string, string>();
+  const find = (id: string): string => {
+    const next = parent.get(id) ?? id;
+    if (next !== id) {
+      const root = find(next);
+      parent.set(id, root);
+      return root;
+    }
+    return id;
+  };
+  const union = (a: string, b: string) => {
+    const rootA = find(a);
+    const rootB = find(b);
+    if (rootA !== rootB) parent.set(rootA, rootB);
+  };
+
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      const a = candidates[i];
+      const b = candidates[j];
+      const nameA = getAttributeDisplayName(
+        getAttributeItemById(biography, a.category, a.id),
+        a.category,
+      );
+      const nameB = getAttributeDisplayName(
+        getAttributeItemById(biography, b.category, b.id),
+        b.category,
+      );
+      if (!namesNearDuplicate(nameA, nameB)) continue;
+      union(a.id, b.id);
+    }
+  }
+
+  const groups = new Map<string, AttributeAnalysisItem[]>();
+  for (const item of candidates) {
+    const root = find(item.id);
+    const list = groups.get(root) ?? [];
+    list.push(item);
+    groups.set(root, list);
+  }
+
+  const dropIds = new Set<string>();
+  const keepScore = new Map<string, number>();
+  for (const members of groups.values()) {
+    if (members.length < 2) continue;
+    const sorted = [...members].sort((a, b) => {
+      const nameA = tokenizeAttributeName(
+        getAttributeDisplayName(
+          getAttributeItemById(biography, a.category, a.id),
+          a.category,
+        ),
+      );
+      const nameB = tokenizeAttributeName(
+        getAttributeDisplayName(
+          getAttributeItemById(biography, b.category, b.id),
+          b.category,
+        ),
+      );
+      if (nameA.length !== nameB.length) return nameA.length - nameB.length;
+      const joinedA = nameA.join(" ");
+      const joinedB = nameB.join(" ");
+      if (joinedA.length !== joinedB.length) {
+        return joinedA.length - joinedB.length;
+      }
+      return b.relevance_score - a.relevance_score;
+    });
+    const keeper = sorted[0];
+    const maxScore = Math.max(...members.map((item) => item.relevance_score));
+    keepScore.set(keeper.id, maxScore);
+    for (const member of sorted.slice(1)) dropIds.add(member.id);
+  }
+
+  if (dropIds.size === 0 && keepScore.size === 0) return analysis;
+
+  return {
+    ...analysis,
+    attribute_analysis: analysis.attribute_analysis.map((item) => {
+      if (dropIds.has(item.id)) {
+        return {
+          ...item,
+          relevance_score: 0,
+          reason: item.reason.includes("near-duplicate")
+            ? item.reason
+            : `${item.reason} (Merged into a more general near-duplicate skill.)`.trim(),
+        };
+      }
+      const nextScore = keepScore.get(item.id);
+      if (nextScore == null || nextScore === item.relevance_score) return item;
+      return {
+        ...item,
+        relevance_score: nextScore,
+        reason: item.reason.includes("highest score")
+          ? item.reason
+          : `${item.reason} (Took highest score among near-duplicate skills.)`.trim(),
+      };
+    }),
+  };
+}
+
+/** Drop standalone soft skills and collapse word-contained skill duplicates. */
+export function applySkillListRules(
+  biography: Biography,
+  analysis: HighLevelAnalysis,
+): HighLevelAnalysis {
+  return collapseContainedAttributeDuplicates(
+    biography,
+    relocateStandaloneSoftSkills(biography, analysis),
+  );
+}
+
+/**
+ * Suggest aggressive attribute merges: near-duplicates and family clusters
+ * within skills/tools (groups of 2+).
+ */
+export function suggestAttributeMergeGroups(
+  biography: Biography,
+  analysis: HighLevelAnalysis,
+): string[][] {
+  const merged = getMemberIdsInAttributeMerges(analysis);
+  const candidates = analysis.attribute_analysis.filter(
+    (item) =>
+      !merged.has(item.id) &&
+      item.relevance_score > 0 &&
+      isSkillOrToolAttribute(biography, item),
+  );
+
+  const buckets = new Map<string, AttributeAnalysisItem[]>();
+  for (const item of candidates) {
+    const key = attributeSimilarityKey(biography, item);
+    if (!key) continue;
+    const list = buckets.get(key) ?? [];
+    list.push(item);
+    buckets.set(key, list);
+  }
+
+  const suggestions: string[][] = [];
+  const used = new Set<string>();
+
+  // Near-duplicate pairs across the category (even different family keys).
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      const a = candidates[i];
+      const b = candidates[j];
+      if (a.category !== b.category) continue;
+      if (used.has(a.id) || used.has(b.id)) continue;
+      const nameA = getAttributeDisplayName(
+        getAttributeItemById(biography, a.category, a.id),
+        a.category,
+      );
+      const nameB = getAttributeDisplayName(
+        getAttributeItemById(biography, b.category, b.id),
+        b.category,
+      );
+      if (!namesNearDuplicate(nameA, nameB)) continue;
+      suggestions.push([a.id, b.id]);
+      used.add(a.id);
+      used.add(b.id);
+    }
+  }
+
+  for (const members of buckets.values()) {
+    const ids = members
+      .map((item) => item.id)
+      .filter((id) => !used.has(id));
+    if (ids.length < 2) continue;
+    suggestions.push(ids);
+    for (const id of ids) used.add(id);
+  }
+
+  return suggestions;
+}
+
+export function applyAllSuggestedAttributeMerges(
+  biography: Biography,
+  analysis: HighLevelAnalysis,
+): HighLevelAnalysis {
+  let next = analysis;
+  for (const memberIds of suggestAttributeMergeGroups(biography, next)) {
+    const first = next.attribute_analysis.find(
+      (item) => item.id === memberIds[0],
+    );
+    next = addAttributeMergeGroup(next, memberIds, first?.category);
+  }
+  return next;
+}
+
+export function getSuggestedAttributeMergeLabel(
+  biography: Biography,
+  analysis: HighLevelAnalysis,
+  memberIds: string[],
+): string {
+  return getAttributeMergeLabel(biography, analysis, memberIds);
+}
+
+/** Categories present in attribute analysis (for UI suggestion loops). */
+export function attributeCategoriesWithItems(
+  analysis: HighLevelAnalysis,
+): string[] {
+  const present = new Set(
+    analysis.attribute_analysis.map((item) => item.category),
+  );
+  return getAttributeCategoryDefs(analysis)
+    .map((def) => def.id)
+    .filter((id) => present.has(id));
 }

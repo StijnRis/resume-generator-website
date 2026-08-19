@@ -133,7 +133,7 @@ export function CvPreviewSection({
         .trim()
         .replace(/\s+/g, "_")
         .replace(/[^\w\-]+/g, "");
-      await downloadCvPdf(element, `resume_${safeName || "CV"}.pdf`, pageCount);
+      await downloadCvPdf(element, `resume_${safeName || "resume"}.pdf`, pageCount);
     } catch (error) {
       console.error("[CvPreviewSection] PDF download failed:", error);
     } finally {
@@ -157,15 +157,15 @@ export function CvPreviewSection({
     >
       <div className="flex items-center justify-between mb-3 gap-3 flex-wrap shrink-0">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-900">CV</h2>
+          <h2 className="text-lg font-semibold text-zinc-900">Resume</h2>
           <p className="text-sm text-zinc-500 mt-0.5">
             {loading
               ? "Generating texts..."
               : measuring
-                ? "Measuring layout..."
+                ? "Updating layout..."
                 : displayCv
                   ? `Updates live · up to ${pageCount} page${pageCount === 1 ? "" : "s"}`
-                  : "Run Analyze to preview the CV"}
+                  : "Run Analyze to preview the resume"}
           </p>
         </div>
         {displayCv && (
@@ -182,7 +182,7 @@ export function CvPreviewSection({
 
       {!displayCv && !measuring && (
         <p className="text-sm text-zinc-500">
-          Complete Analyze to see a CV preview here.
+          Complete Analyze to see a resume preview here.
         </p>
       )}
 

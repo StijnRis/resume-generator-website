@@ -1,6 +1,7 @@
 export const CV_PAGE_WIDTH_MM = 210;
 export const CV_PAGE_HEIGHT_MM = 297;
-export const CV_PAGE_PADDING_MM = 15;
+/** 1 inch margins on A4. */
+export const CV_PAGE_PADDING_MM = 25.4;
 export const CV_PAGE_CONTENT_HEIGHT_MM =
   CV_PAGE_HEIGHT_MM - CV_PAGE_PADDING_MM * 2;
 

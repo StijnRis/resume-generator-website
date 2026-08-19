@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   getExperienceBulletCount,
   getExperienceImportance,
+  normalizeBullets,
 } from "@/lib/analysis/experience-score";
 import {
   getExperienceDisplayName,
@@ -11,11 +12,10 @@ import {
 import type {
   Biography,
   ExperienceAnalysisItem,
-  ExperienceCategoryKey,
+  ExperienceBulletCandidate,
   ExperienceMergeGroup,
   HighLevelAnalysis,
 } from "@/lib/types";
-import { EXPERIENCE_CATEGORIES } from "@/lib/types";
 
 export type CvExperienceUnit =
   | { type: "single"; item: ExperienceAnalysisItem }
@@ -26,18 +26,39 @@ function normalizeMergeKey(value: string): string {
 }
 
 const EVENT_FAMILY_PATTERNS: { family: string; pattern: RegExp }[] = [
-  { family: "hackathon", pattern: /\bhackathons?\b|\bcode\s*jam\b|\bhack\s*night\b/i },
-  { family: "conference", pattern: /\bconferences?\b|\bsummit\b|\bmeetup\b/i },
-  { family: "competition", pattern: /\bcompetitions?\b|\bcontest\b|\bchallenge\b/i },
+  { family: "hackathon", pattern: /\bhackathons?\b|\bcode\s*jam\b|\bhack\s*night\b|\bjunction\b|\bhack[\s-]?the\b/i },
+  { family: "conference", pattern: /\bconferences?\b|\bsummit\b|\bmeetup\b|\bnetworking\b/i },
+  { family: "competition", pattern: /\bcompetitions?\b|\bcontest\b|\bchallenge\b|\bolympiads?\b|\bctf\b/i },
   { family: "workshop", pattern: /\bworkshops?\b|\btraining\b|\bbootcamp\b/i },
+  { family: "running", pattern: /\brun(ning)?\b|\bmarathon\b|\b5k\b|\b10k\b|\brace\b/i },
+  { family: "mun", pattern: /\bmodel\s*united\b|\bmodel\s*un\b|\bmun\b/i },
+  { family: "shadow", pattern: /\bshadow\b/i },
 ];
 
 const ROLE_FAMILY_PATTERNS: { family: string; pattern: RegExp }[] = [
   { family: "intern", pattern: /\bintern(ship)?\b|\bstagiair\b/i },
-  { family: "student-assistant", pattern: /\bstudent\s*assistant\b|\bteaching\s*assistant\b|\bta\b/i },
+  { family: "student-assistant", pattern: /\bstudent\s*assistant\b|\bteaching\s*assistant\b|\bta\b|\btutor/i },
+  { family: "mentor", pattern: /\bmentor(ship)?\b|\bonboard/i },
+  { family: "teacher", pattern: /\bteacher\b|\btaught\b|\bworkshop\b|\bfacilitat/i },
   { family: "software-engineer", pattern: /\bsoftware\s*engineer\b|\bdeveloper\b|\bprogrammer\b/i },
   { family: "research", pattern: /\bresearch(er)?\b|\blab\s*assistant\b/i },
 ];
+
+const NON_HACKATHON_EVENT_FAMILIES = new Set([
+  "running",
+  "mun",
+  "shadow",
+  "conference",
+  "workshop",
+]);
+
+function experienceSourceType(
+  biography: Biography,
+  item: ExperienceAnalysisItem,
+): string {
+  const source = getExperienceItemById(biography, item.category, item.id);
+  return String(source?.type ?? item.category ?? "").toLowerCase();
+}
 
 function detectFamily(
   text: string,
@@ -76,39 +97,50 @@ export function getExperienceSimilarityKey(
 
   const title = String(source.title ?? source.position ?? source.role ?? "");
   const organization = String(source.organization ?? "");
-  const type = String(source.type ?? "");
-  const blob = `${title} ${type} ${organization}`;
+  const sourceType = experienceSourceType(biography, item);
+  const blob = `${title} ${sourceType} ${organization} ${String(source.project_type ?? "")}`;
 
-  if (item.category === "events" || item.category === "extracurriculars") {
+  if (sourceType === "events" || sourceType === "extracurriculars") {
     const family = detectFamily(blob, EVENT_FAMILY_PATTERNS);
-    if (family) return `similar|${item.category}|${family}`;
-    if (type.trim()) {
-      return `similar|${item.category}|type|${normalizeMergeKey(type)}`;
+    if (family && NON_HACKATHON_EVENT_FAMILIES.has(family)) {
+      return `similar|${sourceType}|${family}`;
     }
+    if (family) return `similar|${sourceType}|${family}`;
+    return `similar|${sourceType}|hackathon-cluster`;
   }
 
-  if (item.category === "work" || item.category === "volunteer") {
+  if (sourceType === "sports") {
+    return "similar|sports|all";
+  }
+
+  if (sourceType === "work" || sourceType === "volunteer") {
     const roleFamily = detectFamily(
       `${title} ${String(source.position ?? "")} ${String(source.role ?? "")}`,
       ROLE_FAMILY_PATTERNS,
     );
     if (organization && roleFamily) {
-      return `similar|${item.category}|${normalizeMergeKey(organization)}|${roleFamily}`;
+      return `similar|${sourceType}|${normalizeMergeKey(organization)}|${roleFamily}`;
     }
-    // Same employer + nearly identical position wording
-    if (organization && title) {
-      const position = normalizeMergeKey(
-        String(source.position ?? source.role ?? title),
-      );
-      if (position.length >= 4) {
-        return `similar|${item.category}|${normalizeMergeKey(organization)}|role|${position}`;
-      }
+    if (roleFamily) {
+      return `similar|${sourceType}|role|${roleFamily}`;
+    }
+    if (organization) {
+      return `similar|${sourceType}|org|${normalizeMergeKey(organization)}`;
     }
   }
 
-  if (item.category === "projects") {
+  if (sourceType === "research") {
+    const family = detectFamily(blob, ROLE_FAMILY_PATTERNS);
+    return `similar|research|${family ?? "all"}`;
+  }
+
+  if (sourceType === "projects") {
     const family = detectFamily(blob, EVENT_FAMILY_PATTERNS);
     if (family) return `similar|projects|${family}`;
+  }
+
+  if (organization) {
+    return `similar|${sourceType}|org|${normalizeMergeKey(organization)}`;
   }
 
   return null;
@@ -131,13 +163,18 @@ function shouldSuggestMerge(
   const avgBullets =
     members.reduce((sum, item) => sum + getExperienceBulletCount(item), 0) /
     members.length;
-  if (avgBullets <= 2) return true;
+  if (avgBullets <= 3) return true;
 
-  // Events / extracurricular clusters (e.g. hackathons) improve scannability.
+  const sourceTypes = members.map((item) =>
+    experienceSourceType(biography, item),
+  );
   if (
-    members.every(
-      (item) =>
-        item.category === "events" || item.category === "extracurriculars",
+    sourceTypes.every(
+      (type) =>
+        type === "events" ||
+        type === "extracurriculars" ||
+        type === "sports" ||
+        type === "research",
     )
   ) {
     return true;
@@ -150,17 +187,13 @@ function shouldSuggestMerge(
   });
   if (orgs[0] && orgs.every((org) => org === orgs[0])) return true;
 
-  // High-importance clusters still benefit from one coherent story.
-  const avgImportance =
-    members.reduce((sum, item) => sum + getExperienceImportance(item), 0) /
-    members.length;
-  return avgImportance >= 3 && members.length >= 3;
+  return members.length >= 2;
 }
 
 export function suggestMergeGroupsForCategory(
   biography: Biography,
   analysis: HighLevelAnalysis,
-  category: ExperienceCategoryKey,
+  category: string,
 ): string[][] {
   const mergedIds = getMemberIdsInMerges(analysis);
   const items = analysis.experience_analysis.filter(
@@ -194,7 +227,18 @@ export function suggestMergeGroupsForCategory(
     suggestions.push(memberIds);
   }
 
-  return suggestions;
+  suggestions.sort((a, b) => b.length - a.length);
+  const used = new Set<string>();
+  const disjoint: string[][] = [];
+  for (const memberIds of suggestions) {
+    const free = memberIds.filter((id) => !used.has(id));
+    if (free.length < 2) continue;
+    if (!shouldSuggestMerge(biography, analysis, free)) continue;
+    disjoint.push(free);
+    for (const id of free) used.add(id);
+  }
+
+  return disjoint;
 }
 
 export function getMergeMap(
@@ -222,7 +266,7 @@ export function getMemberIdsInMerges(analysis: HighLevelAnalysis): Set<string> {
 export function getMergeGroupCategory(
   analysis: HighLevelAnalysis,
   group: ExperienceMergeGroup,
-): ExperienceCategoryKey | null {
+): string | null {
   if (group.category) return group.category;
   const first = analysis.experience_analysis.find(
     (item) => item.id === group.member_ids[0],
@@ -232,7 +276,7 @@ export function getMergeGroupCategory(
 
 export function getMergeGroupsForCategory(
   analysis: HighLevelAnalysis,
-  category: ExperienceCategoryKey,
+  category: string,
 ): ExperienceMergeGroup[] {
   return (analysis.experience_merges ?? []).filter(
     (group) => getMergeGroupCategory(analysis, group) === category,
@@ -286,12 +330,25 @@ export function getUnitBulletCount(unit: CvExperienceUnit): number {
   if (unit.type === "single") {
     return getExperienceBulletCount(unit.item);
   }
-  if (unit.group.suggested_bullet_points != null) {
-    return getExperienceBulletCount({
-      suggested_bullet_points: unit.group.suggested_bullet_points,
-    });
+  if (unit.group.bullets != null) {
+    return getExperienceBulletCount({ bullets: unit.group.bullets });
   }
   return Math.max(0, ...unit.items.map(getExperienceBulletCount));
+}
+
+/** Bullet candidates for a unit (merged groups prefer their own bullet list). */
+export function getUnitBullets(
+  unit: CvExperienceUnit,
+): ExperienceBulletCandidate[] {
+  if (unit.type === "single") {
+    return normalizeBullets(unit.item.bullets, unit.item.id);
+  }
+  if (unit.group.bullets != null) {
+    return normalizeBullets(unit.group.bullets, unit.group.id);
+  }
+  return unit.items.flatMap((item) =>
+    normalizeBullets(item.bullets, item.id),
+  );
 }
 
 export function isUnitIncluded(unit: CvExperienceUnit): boolean {
@@ -303,7 +360,7 @@ export function getUnitCvId(unit: CvExperienceUnit): string {
 }
 
 export function createMergeGroup(
-  category: ExperienceCategoryKey,
+  category: string,
   memberIds: string[],
 ): ExperienceMergeGroup {
   return {
@@ -329,7 +386,7 @@ export function removeMemberFromMerges(
 
 export function addMergeGroup(
   analysis: HighLevelAnalysis,
-  category: ExperienceCategoryKey,
+  category: string,
   memberIds: string[],
 ): HighLevelAnalysis {
   if (memberIds.length < 2) return analysis;
@@ -349,7 +406,7 @@ export function addMergeGroup(
   const group: ExperienceMergeGroup = {
     ...createMergeGroup(category, memberIds),
     relevance_score: Math.max(...members.map(getExperienceImportance)),
-    suggested_bullet_points: Math.max(...members.map(getExperienceBulletCount)),
+    bullets: members.flatMap((item) => normalizeBullets(item.bullets)),
   };
 
   return {
@@ -373,7 +430,7 @@ export function removeMergeGroup(
 export function updateMergeGroup(
   analysis: HighLevelAnalysis,
   groupId: string,
-  update: Partial<Pick<ExperienceMergeGroup, "relevance_score" | "suggested_bullet_points">>,
+  update: Partial<Pick<ExperienceMergeGroup, "relevance_score" | "bullets">>,
 ): HighLevelAnalysis {
   return {
     ...analysis,
@@ -389,7 +446,10 @@ export function applyAllSuggestedMerges(
   analysis: HighLevelAnalysis,
 ): HighLevelAnalysis {
   let next = analysis;
-  for (const category of EXPERIENCE_CATEGORIES) {
+  const categories = new Set(
+    next.experience_analysis.map((item) => item.category),
+  );
+  for (const category of categories) {
     for (const memberIds of suggestMergeGroupsForCategory(
       biography,
       next,
