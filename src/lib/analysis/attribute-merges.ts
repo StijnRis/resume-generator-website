@@ -6,6 +6,8 @@ import {
   getAttributeItemById,
   getCategoryLabel,
 } from "@/lib/biography/lookup";
+import { getAttributeById } from "@/lib/biography/flat";
+import { sourceTypeLabel } from "@/lib/types";
 import type {
   AttributeAnalysisItem,
   AttributeMergeGroup,
@@ -137,6 +139,7 @@ export function addAttributeMergeGroup(
     category: category ?? members[0].category,
     member_ids: unique,
     relevance_score: Math.max(...members.map((item) => item.relevance_score)),
+    reason: `Combined ${unique.length} related attributes into one row.`,
   };
 
   return {
@@ -182,6 +185,29 @@ export function updateAttributeMergeGroup(
       group.id === groupId ? { ...group, ...update } : group,
     ),
   };
+}
+
+export function getAttributeMergeReason(
+  biography: Biography,
+  analysis: HighLevelAnalysis,
+  group: Pick<AttributeMergeGroup, "member_ids" | "reason">,
+): string {
+  const existing = String(group.reason ?? "").trim();
+  if (existing) return existing;
+  const names = group.member_ids
+    .map((id) => {
+      const item = analysis.attribute_analysis.find((entry) => entry.id === id);
+      if (!item) return null;
+      return getAttributeDisplayName(
+        getAttributeItemById(biography, item.category, item.id),
+        item.category,
+      );
+    })
+    .filter(Boolean);
+  if (names.length === 0) {
+    return `Combined ${group.member_ids.length} related attributes.`;
+  }
+  return `Combined related attributes: ${names.join(", ")}.`;
 }
 
 export function getAttributeMergeLabel(
@@ -540,14 +566,175 @@ function collapseContainedAttributeDuplicates(
   };
 }
 
-/** Drop standalone soft skills and collapse word-contained skill duplicates. */
+const ATTRIBUTE_FOCUS_LABEL: Record<string, string> = {
+  technical: "Technical Skills",
+  interests: "Interests",
+  awards: "Awards",
+  certificates: "Certificates",
+  publications: "Publications",
+  references: "References",
+  languages: "Languages",
+};
+
+const ATTRIBUTE_FOCUS_BY_SOURCE: Record<string, string> = {
+  skills: "technical",
+  tools: "technical",
+  interests: "interests",
+  awards: "awards",
+  certificates: "certificates",
+  publications: "publications",
+  references: "references",
+  languages: "languages",
+};
+
+function attributeFocusFromSourceType(type: string): string | null {
+  const key = String(type ?? "").toLowerCase().trim();
+  return ATTRIBUTE_FOCUS_BY_SOURCE[key] ?? null;
+}
+
+function attributeFocusFromLabelPart(part: string): string | null {
+  const value = part.toLowerCase().trim();
+  if (!value) return null;
+  if (/\binterests?\b/.test(value)) return "interests";
+  if (/\bawards?\b|\bhonou?rs?\b/.test(value)) return "awards";
+  if (/\bcertificates?\b|\bcertifications?\b/.test(value)) return "certificates";
+  if (/\bpublications?\b/.test(value)) return "publications";
+  if (/\breferences?\b/.test(value)) return "references";
+  if (/\blanguages?\b/.test(value)) return "languages";
+  if (/\bsoft\b/.test(value)) return null;
+  if (/\bskills?\b|\btools?\b|\btechnical\b/.test(value)) return "technical";
+  return null;
+}
+
+function splitCompoundLabelParts(label: string): string[] {
+  return label
+    .split(/\s*(?:&|\/|\+|,\s+|\band\b)\s*/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function isCompoundMixedAttributeLabel(label: string): boolean {
+  const parts = splitCompoundLabelParts(label);
+  if (parts.length < 2) return false;
+  const foci = parts
+    .map(attributeFocusFromLabelPart)
+    .filter((focus): focus is string => Boolean(focus));
+  return new Set(foci).size >= 2;
+}
+
+function ensureAttributeCategory(
+  analysis: HighLevelAnalysis,
+  label: string,
+  reason: string,
+): HighLevelAnalysis {
+  const existing = analysis.attribute_categories.find(
+    (entry) => entry.id === label || entry.label === label,
+  );
+  if (existing) return analysis;
+  const order =
+    Math.max(0, ...analysis.attribute_categories.map((entry) => entry.order)) + 1;
+  return {
+    ...analysis,
+    attribute_categories: [
+      ...analysis.attribute_categories,
+      { id: label, label, order, reason },
+    ],
+  };
+}
+
+/**
+ * Attribute categories must cover one kind of content. Split mixed groups
+ * such as "Awards & Interests" back into single-focus categories.
+ */
+export function splitMixedAttributeCategories(
+  biography: Biography,
+  analysis: HighLevelAnalysis,
+): HighLevelAnalysis {
+  const itemsByCategory = new Map<string, AttributeAnalysisItem[]>();
+  for (const item of analysis.attribute_analysis) {
+    const list = itemsByCategory.get(item.category) ?? [];
+    list.push(item);
+    itemsByCategory.set(item.category, list);
+  }
+
+  const reassign = new Map<string, string>();
+  let next = analysis;
+
+  for (const [category, items] of itemsByCategory) {
+    const foci = new Map<string, AttributeAnalysisItem[]>();
+    for (const item of items) {
+      const source = getAttributeById(biography, item.id);
+      const focus = attributeFocusFromSourceType(source?.type ?? "");
+      if (!focus) continue;
+      const list = foci.get(focus) ?? [];
+      list.push(item);
+      foci.set(focus, list);
+    }
+
+    const mixedKinds = foci.size >= 2;
+    const compoundLabel = isCompoundMixedAttributeLabel(category);
+    if (!mixedKinds && !compoundLabel) continue;
+
+    if (foci.size <= 1) {
+      const onlyFocus = [...foci.keys()][0];
+      if (!onlyFocus) continue;
+      const label = ATTRIBUTE_FOCUS_LABEL[onlyFocus] ?? sourceTypeLabel(onlyFocus);
+      if (label === category) continue;
+      next = ensureAttributeCategory(
+        next,
+        label,
+        `Split from “${category}” so this section covers only one kind of content.`,
+      );
+      for (const item of items) reassign.set(item.id, label);
+      continue;
+    }
+
+    for (const [focus, members] of foci) {
+      const label = ATTRIBUTE_FOCUS_LABEL[focus] ?? sourceTypeLabel(focus);
+      next = ensureAttributeCategory(
+        next,
+        label,
+        `Kept as its own section so attribute categories stay focused on one kind of content.`,
+      );
+      for (const item of members) reassign.set(item.id, label);
+    }
+  }
+
+  if (reassign.size === 0) return next;
+
+  const attribute_analysis = next.attribute_analysis.map((item) => {
+    const category = reassign.get(item.id);
+    if (!category || category === item.category) return item;
+    return {
+      ...item,
+      category,
+      reason: item.reason.includes("single-focus")
+        ? item.reason
+        : `${item.reason} (Moved to ${category} so categories stay single-focus.)`.trim(),
+    };
+  });
+
+  const used = new Set(attribute_analysis.map((item) => item.category));
+  const attribute_categories = next.attribute_categories.filter(
+    (entry) => used.has(entry.id) || used.has(entry.label),
+  );
+
+  return {
+    ...next,
+    attribute_categories,
+    attribute_analysis,
+  };
+}
 export function applySkillListRules(
   biography: Biography,
   analysis: HighLevelAnalysis,
 ): HighLevelAnalysis {
-  return collapseContainedAttributeDuplicates(
+  return splitMixedAttributeCategories(
     biography,
-    relocateStandaloneSoftSkills(biography, analysis),
+    collapseContainedAttributeDuplicates(
+      biography,
+      relocateStandaloneSoftSkills(biography, analysis),
+    ),
   );
 }
 
