@@ -26,7 +26,10 @@ import {
   normalizeAnalysis,
   rankBulletsForFit,
 } from "@/lib/analysis/experience-score";
-import { applyContactSettings, emptyContactDetails } from "@/lib/formatting/header-contacts";
+import {
+  applyContactSettings,
+  emptyContactDetails,
+} from "@/lib/formatting/header-contacts";
 import {
   applyTranslationMappings,
   collectTranslatableCvStrings,
@@ -292,15 +295,10 @@ export default function HomePage() {
         analysis: HighLevelAnalysis;
         llmAnalysis?: HighLevelAnalysis;
         debug?: { systemPrompt?: string; userPrompt?: string };
-      }>(
-        "/api/llm/analyze",
-        analyzeBody,
-        debug,
-        {
-          systemPrompt: ANALYSIS_PROMPT,
-          userPrompt: JSON.stringify(analyzeUserPayload, null, 2),
-        },
-      );
+      }>("/api/llm/analyze", analyzeBody, debug, {
+        systemPrompt: ANALYSIS_PROMPT,
+        userPrompt: JSON.stringify(analyzeUserPayload, null, 2),
+      });
 
       const llmAnalysis = normalizeAnalysis(
         result.llmAnalysis ?? result.analysis,

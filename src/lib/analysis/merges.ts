@@ -22,7 +22,11 @@ import type {
 
 export type CvExperienceUnit =
   | { type: "single"; item: ExperienceAnalysisItem }
-  | { type: "merged"; group: ExperienceMergeGroup; items: ExperienceAnalysisItem[] };
+  | {
+      type: "merged";
+      group: ExperienceMergeGroup;
+      items: ExperienceAnalysisItem[];
+    };
 
 export interface CodeExperienceMerge {
   member_ids: string[];
@@ -76,7 +80,11 @@ function tokenizeExperienceText(value: string): string[] {
     .replace(/[._/\-]+/g, " ")
     .replace(/[^a-z0-9+# ]+/g, " ")
     .split(/\s+/)) {
-    if (token.length < 2 || EXPERIENCE_STOP_WORDS.has(token) || seen.has(token)) {
+    if (
+      token.length < 2 ||
+      EXPERIENCE_STOP_WORDS.has(token) ||
+      seen.has(token)
+    ) {
       continue;
     }
     seen.add(token);
@@ -267,7 +275,9 @@ export function detectExperienceSubsetMerges(
   for (const members of clusters.values()) {
     const unique = members.filter(
       (item, index) =>
-        item && item.id && members.findIndex((other) => other?.id === item.id) === index,
+        item &&
+        item.id &&
+        members.findIndex((other) => other?.id === item.id) === index,
     );
     if (unique.length < 2) continue;
     if (unique.some((item) => used.has(item.id!))) continue;
@@ -283,7 +293,8 @@ export function detectExperienceSubsetMerges(
     );
 
     if (allSubsetOfLongest) {
-      const shorter = unique.find((item) => item.id !== longest.id) ?? unique[0];
+      const shorter =
+        unique.find((item) => item.id !== longest.id) ?? unique[0];
       const duplicate = unique.every((item) =>
         tokensEqual(
           experienceIdentifyingTokens(item),
@@ -491,9 +502,7 @@ export function getUnitBullets(
   if (unit.group.bullets != null) {
     return normalizeBullets(unit.group.bullets, unit.group.id);
   }
-  return unit.items.flatMap((item) =>
-    normalizeBullets(item.bullets, item.id),
-  );
+  return unit.items.flatMap((item) => normalizeBullets(item.bullets, item.id));
 }
 
 export function isUnitIncluded(unit: CvExperienceUnit): boolean {
@@ -517,7 +526,8 @@ function pickSupersetMember(
     const tokensB = sourceB
       ? experienceIdentifyingTokens(sourceB as unknown as BiographyExperience)
       : [];
-    if (tokensA.length !== tokensB.length) return tokensB.length - tokensA.length;
+    if (tokensA.length !== tokensB.length)
+      return tokensB.length - tokensA.length;
     return getExperienceImportance(b) - getExperienceImportance(a);
   })[0];
 }
@@ -539,7 +549,9 @@ function bulletsForMergedMembers(
   const seenTopics = new Set<string>();
   const unique: ExperienceBulletCandidate[] = [];
   for (const item of members) {
-    for (const bullet of rankBulletsForFit(normalizeBullets(item.bullets, item.id))) {
+    for (const bullet of rankBulletsForFit(
+      normalizeBullets(item.bullets, item.id),
+    )) {
       const topicKey = bullet.topic.trim().toLowerCase();
       if (!topicKey || seenTopics.has(topicKey)) continue;
       seenTopics.add(topicKey);
@@ -612,7 +624,8 @@ export function addMergeGroup(
     ...createMergeGroup(category, memberIds, reason),
     relevance_score: Math.max(...members.map(getExperienceImportance)),
     bullets:
-      options?.biography && (options.capBullets || options.preferSupersetBullets)
+      options?.biography &&
+      (options.capBullets || options.preferSupersetBullets)
         ? bulletsForMergedMembers(options.biography, members, {
             cap: options.capBullets,
             preferSuperset: options.preferSupersetBullets,
@@ -694,9 +707,10 @@ function existingGroupCovering(
   memberIds: string[],
 ): ExperienceMergeGroup | undefined {
   const wanted = new Set(memberIds);
-  return (analysis.experience_merges ?? []).find((group) =>
-    memberIds.every((id) => group.member_ids.includes(id)) &&
-    group.member_ids.every((id) => wanted.has(id)),
+  return (analysis.experience_merges ?? []).find(
+    (group) =>
+      memberIds.every((id) => group.member_ids.includes(id)) &&
+      group.member_ids.every((id) => wanted.has(id)),
   );
 }
 
@@ -714,7 +728,9 @@ export function applyExperienceSubsetMerges(
     const existing = existingGroupCovering(next, suggestion.member_ids);
     if (existing) {
       if (!String(existing.reason ?? "").trim()) {
-        next = updateMergeGroup(next, existing.id, { reason: suggestion.reason });
+        next = updateMergeGroup(next, existing.id, {
+          reason: suggestion.reason,
+        });
       }
       continue;
     }

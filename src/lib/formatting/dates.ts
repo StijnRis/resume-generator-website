@@ -55,7 +55,10 @@ export function normalizeDateString(
   return parseDateParts(dateStr).normalized;
 }
 
-import { monthNamesForLanguage, type CvUiLabels } from "@/lib/formatting/ui-labels";
+import {
+  monthNamesForLanguage,
+  type CvUiLabels,
+} from "@/lib/formatting/ui-labels";
 
 export interface DateFormatOptions {
   language?: string | null;
@@ -152,9 +155,7 @@ export function isFutureOrPresentDate(
 }
 
 /** Ongoing / current role: no end date, or end is present/future. */
-export function isOngoingExperience(
-  endDate?: string | null,
-): boolean {
+export function isOngoingExperience(endDate?: string | null): boolean {
   return isFutureOrPresentDate(endDate);
 }
 

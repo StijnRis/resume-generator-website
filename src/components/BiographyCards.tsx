@@ -46,8 +46,7 @@ export function BiographyCards({ biography }: BiographyCardsProps) {
   );
 
   const experienceGroups = useMemo(
-    () =>
-      groupCardsByCategory(experienceCards, experienceTypeOrder(biography)),
+    () => groupCardsByCategory(experienceCards, experienceTypeOrder(biography)),
     [biography, experienceCards],
   );
   const attributeGroups = useMemo(

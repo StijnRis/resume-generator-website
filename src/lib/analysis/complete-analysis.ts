@@ -1,7 +1,4 @@
-import {
-  getAttributes,
-  getExperiences,
-} from "@/lib/biography/flat";
+import { getAttributes, getExperiences } from "@/lib/biography/flat";
 import { applySkillListRules } from "@/lib/analysis/attribute-merges";
 import { applyExperienceSubsetMerges } from "@/lib/analysis/merges";
 import type {
@@ -24,8 +21,7 @@ function ensureCategoriesFromAssignments(
 ): DynamicCategoryDefinition[] {
   const present = new Set(defined.map((entry) => entry.id));
   const completed = [...defined];
-  let nextOrder =
-    Math.max(0, ...completed.map((entry) => entry.order), 0) + 1;
+  let nextOrder = Math.max(0, ...completed.map((entry) => entry.order), 0) + 1;
 
   for (const id of assignedIds) {
     if (!id || present.has(id)) continue;

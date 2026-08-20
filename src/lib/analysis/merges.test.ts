@@ -94,7 +94,10 @@ describe("detectExperienceSubsetMerges", () => {
 
     const groups = detectExperienceSubsetMerges(biography);
     assert.equal(groups.length, 1);
-    assert.deepEqual([...groups[0].member_ids].sort(), ["intern", "swe-intern"]);
+    assert.deepEqual([...groups[0].member_ids].sort(), [
+      "intern",
+      "swe-intern",
+    ]);
     assert.match(groups[0].reason, /subset/i);
     assert.match(groups[0].reason, /Intern/);
   });
@@ -204,10 +207,12 @@ describe("detectExperienceSubsetMerges", () => {
     assert.ok(groups.every((group) => group.member_ids.length === 2));
     const allIds = groups.flatMap((group) => group.member_ids);
     assert.equal(new Set(allIds).size, allIds.length);
-    assert.ok(!groups.some((group) => {
-      const set = new Set(group.member_ids);
-      return set.has("product") && set.has("swe");
-    }));
+    assert.ok(
+      !groups.some((group) => {
+        const set = new Set(group.member_ids);
+        return set.has("product") && set.has("swe");
+      }),
+    );
   });
 });
 
@@ -349,9 +354,7 @@ describe("splitMixedAttributeCategories", () => {
     assert.equal(award?.category, "Awards");
     assert.equal(hobby?.category, "Interests");
     assert.ok(
-      next.attribute_categories.every(
-        (entry) => !/&| and /i.test(entry.label),
-      ),
+      next.attribute_categories.every((entry) => !/&| and /i.test(entry.label)),
     );
   });
 });

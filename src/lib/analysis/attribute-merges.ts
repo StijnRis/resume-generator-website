@@ -48,7 +48,9 @@ export function getAttributeMergeGroupsForCategory(
     const members = group.member_ids
       .map((id) => analysis.attribute_analysis.find((item) => item.id === id))
       .filter((item): item is AttributeAnalysisItem => item != null);
-    return members.length > 0 && members.every((item) => item.category === category);
+    return (
+      members.length > 0 && members.every((item) => item.category === category)
+    );
   });
 }
 
@@ -402,7 +404,10 @@ function relocateStandaloneSoftSkills(
     if (!isSkillOrToolAttribute(biography, item)) return false;
     if (item.relevance_score <= 0) return false;
     if (isSoftSkillsCategory(item.category)) return false;
-    if (!isTechnicalSkillsCategory(item.category) && item.category !== "skills") {
+    if (
+      !isTechnicalSkillsCategory(item.category) &&
+      item.category !== "skills"
+    ) {
       return false;
     }
     const name = normalizeAttributeName(
@@ -588,7 +593,9 @@ const ATTRIBUTE_FOCUS_BY_SOURCE: Record<string, string> = {
 };
 
 function attributeFocusFromSourceType(type: string): string | null {
-  const key = String(type ?? "").toLowerCase().trim();
+  const key = String(type ?? "")
+    .toLowerCase()
+    .trim();
   return ATTRIBUTE_FOCUS_BY_SOURCE[key] ?? null;
 }
 
@@ -597,7 +604,8 @@ function attributeFocusFromLabelPart(part: string): string | null {
   if (!value) return null;
   if (/\binterests?\b/.test(value)) return "interests";
   if (/\bawards?\b|\bhonou?rs?\b/.test(value)) return "awards";
-  if (/\bcertificates?\b|\bcertifications?\b/.test(value)) return "certificates";
+  if (/\bcertificates?\b|\bcertifications?\b/.test(value))
+    return "certificates";
   if (/\bpublications?\b/.test(value)) return "publications";
   if (/\breferences?\b/.test(value)) return "references";
   if (/\blanguages?\b/.test(value)) return "languages";
@@ -632,7 +640,8 @@ function ensureAttributeCategory(
   );
   if (existing) return analysis;
   const order =
-    Math.max(0, ...analysis.attribute_categories.map((entry) => entry.order)) + 1;
+    Math.max(0, ...analysis.attribute_categories.map((entry) => entry.order)) +
+    1;
   return {
     ...analysis,
     attribute_categories: [
@@ -678,7 +687,8 @@ export function splitMixedAttributeCategories(
     if (foci.size <= 1) {
       const onlyFocus = [...foci.keys()][0];
       if (!onlyFocus) continue;
-      const label = ATTRIBUTE_FOCUS_LABEL[onlyFocus] ?? sourceTypeLabel(onlyFocus);
+      const label =
+        ATTRIBUTE_FOCUS_LABEL[onlyFocus] ?? sourceTypeLabel(onlyFocus);
       if (label === category) continue;
       next = ensureAttributeCategory(
         next,
@@ -789,9 +799,7 @@ export function suggestAttributeMergeGroups(
   }
 
   for (const members of buckets.values()) {
-    const ids = members
-      .map((item) => item.id)
-      .filter((id) => !used.has(id));
+    const ids = members.map((item) => item.id).filter((id) => !used.has(id));
     if (ids.length < 2) continue;
     suggestions.push(ids);
     for (const id of ids) used.add(id);

@@ -3,10 +3,7 @@ import {
   getExperienceImportance,
   isExperienceIncluded,
 } from "@/lib/analysis/experience-score";
-import {
-  buildExperienceUnits,
-  isUnitIncluded,
-} from "@/lib/analysis/merges";
+import { buildExperienceUnits, isUnitIncluded } from "@/lib/analysis/merges";
 import type {
   Biography,
   ExperienceAnalysisItem,

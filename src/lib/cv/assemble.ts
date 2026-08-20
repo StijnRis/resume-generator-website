@@ -21,16 +21,18 @@ import {
   isUnitIncluded,
   type CvExperienceUnit,
 } from "@/lib/analysis/merges";
-import { formatDateRange, formatMergedDateRange, parseDateForSort } from "@/lib/formatting/dates";
-import { formatLocationObject, formatLocationString } from "@/lib/formatting/location";
 import {
-  mergeUiLabels,
-} from "@/lib/formatting/ui-labels";
+  formatDateRange,
+  formatMergedDateRange,
+  parseDateForSort,
+} from "@/lib/formatting/dates";
+import {
+  formatLocationObject,
+  formatLocationString,
+} from "@/lib/formatting/location";
+import { mergeUiLabels } from "@/lib/formatting/ui-labels";
 import type { Basics } from "@/lib/types";
-import {
-  getSharedLocation,
-  getSharedOrganization,
-} from "@/lib/cv/merged-meta";
+import { getSharedLocation, getSharedOrganization } from "@/lib/cv/merged-meta";
 import {
   buildAttributeUnits,
   defaultAttributeSectionTitle,
@@ -132,19 +134,18 @@ function collectAttributeUnitItems(
     for (const raw of rawValues) {
       if (!raw) continue;
       const text =
-        generatedItems?.[item.id] ??
-        applyCopiedTranslation(raw, translations);
-      if (!values.some((entry) => entry.id === item.id || entry.text === text)) {
+        generatedItems?.[item.id] ?? applyCopiedTranslation(raw, translations);
+      if (
+        !values.some((entry) => entry.id === item.id || entry.text === text)
+      ) {
         values.push({ id: item.id, text });
       }
     }
   }
 
   values.sort((a, b) => {
-    const scoreA =
-      items.find((item) => item.id === a.id)?.relevance_score ?? 0;
-    const scoreB =
-      items.find((item) => item.id === b.id)?.relevance_score ?? 0;
+    const scoreA = items.find((item) => item.id === a.id)?.relevance_score ?? 0;
+    const scoreB = items.find((item) => item.id === b.id)?.relevance_score ?? 0;
     if (scoreB !== scoreA) return scoreB - scoreA;
     return a.text.localeCompare(b.text);
   });
@@ -275,19 +276,12 @@ function buildAttributeSections(
     });
   }
 
-  return sections.sort(
-    (a, b) => (a.order ?? 99) - (b.order ?? 99),
-  );
+  return sections.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 }
 
 function formatExperienceTitle(value: string): string {
   // Preserve meaningful punctuation (/, ,, &, -). Only strip wrapping quotes.
-  return titleCase(
-    value
-      .replace(/["'`]/g, "")
-      .replace(/\s+/g, " ")
-      .trim(),
-  );
+  return titleCase(value.replace(/["'`]/g, "").replace(/\s+/g, " ").trim());
 }
 
 function sortUnitsByImportance(
@@ -310,9 +304,7 @@ function getUnitsForPageFill(
   return sortUnitsByImportance(biography, units);
 }
 
-function getItemEndSortDate(
-  source: Record<string, unknown> | null,
-): number {
+function getItemEndSortDate(source: Record<string, unknown> | null): number {
   if (!source) return 0;
   const end = source.end_date as string | null | undefined;
   const start = source.start_date as string | undefined;
@@ -511,20 +503,12 @@ function buildExperienceEntryFromParts(
   const title = formatExperienceTitle(rawTitle);
 
   const subtitle = applyCopiedTranslation(
-    (
-      sharedOrganization ??
-      generated.organization?.trim() ??
-      ""
-    ).trim(),
+    (sharedOrganization ?? generated.organization?.trim() ?? "").trim(),
     translations,
   );
 
   const location = applyCopiedTranslation(
-    (
-      sharedLocation ??
-      generated.location?.trim() ??
-      ""
-    ).trim(),
+    (sharedLocation ?? generated.location?.trim() ?? "").trim(),
     translations,
   );
 
@@ -624,7 +608,5 @@ export function getIncludedExperiences(
 ): ExperienceAnalysisItem[] {
   return analysis.experience_analysis
     .filter(isExperienceIncluded)
-    .sort(
-      (a, b) => getExperienceImportance(b) - getExperienceImportance(a),
-    );
+    .sort((a, b) => getExperienceImportance(b) - getExperienceImportance(a));
 }

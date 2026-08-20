@@ -7,7 +7,6 @@ import {
 export async function downloadCvPdf(
   element: HTMLElement,
   filename: string,
-  pageCount: number,
 ): Promise<void> {
   const clone = element.cloneNode(true) as HTMLElement;
   clone.querySelectorAll(".cv-page").forEach((page) => {
@@ -68,8 +67,6 @@ export async function downloadCvPdf(
     document.body.removeChild(iframe);
     throw new Error("Could not create print frame");
   }
-
-  void pageCount;
 
   doc.open();
   doc.write(`<!DOCTYPE html>

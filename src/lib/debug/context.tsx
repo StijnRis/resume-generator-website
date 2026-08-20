@@ -32,10 +32,12 @@ interface DebugContextValue {
   logs: DebugLogEntry[];
   startLog: (entry: StartLogEntry) => string;
   updateLog: (id: string, update: UpdateLogEntry) => void;
-  addLog: (entry: Omit<DebugLogEntry, "id" | "timestamp" | "status" | "events"> & {
-    status?: DebugLogEntry["status"];
-    events?: DebugLogEntry["events"];
-  }) => void;
+  addLog: (
+    entry: Omit<DebugLogEntry, "id" | "timestamp" | "status" | "events"> & {
+      status?: DebugLogEntry["status"];
+      events?: DebugLogEntry["events"];
+    },
+  ) => void;
   clearLogs: () => void;
 }
 
@@ -73,7 +75,9 @@ export function DebugProvider({ children }: { children: ReactNode }) {
       {
         ...entry,
         status: "pending",
-        events: [{ timestamp: new Date().toISOString(), message: "Request sent" }],
+        events: [
+          { timestamp: new Date().toISOString(), message: "Request sent" },
+        ],
       },
       id,
     );
@@ -96,7 +100,8 @@ export function DebugProvider({ children }: { children: ReactNode }) {
 
         return {
           ...log,
-          response: update.response !== undefined ? update.response : log.response,
+          response:
+            update.response !== undefined ? update.response : log.response,
           error: update.error !== undefined ? update.error : log.error,
           status: update.status ?? log.status,
           systemPrompt: update.systemPrompt ?? log.systemPrompt,
@@ -168,9 +173,14 @@ export async function apiCall<T>(
     const responseText = await response.text();
 
     try {
-      data = responseText ? (JSON.parse(responseText) as Record<string, unknown>) : {};
+      data = responseText
+        ? (JSON.parse(responseText) as Record<string, unknown>)
+        : {};
     } catch {
-      console.error(`[apiCall] ${endpoint} returned non-JSON response (${response.status}):`, responseText);
+      console.error(
+        `[apiCall] ${endpoint} returned non-JSON response (${response.status}):`,
+        responseText,
+      );
       handled = true;
       debug.updateLog(logId, {
         status: "error",

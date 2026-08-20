@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import {
-  fitAndPaginateCv,
-  type CvPage,
-} from "@/lib/cv/measure-fit";
+import { fitAndPaginateCv, type CvPage } from "@/lib/cv/measure-fit";
 import type { HighLevelAnalysis, RenderedCv } from "@/lib/types";
 
 interface UseMeasuredCvFitResult {

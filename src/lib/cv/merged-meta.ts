@@ -15,7 +15,9 @@ export function getSharedLocation(
   if (normalized.length === 0) return null;
 
   const firstKey = normalizeLocationKey(normalized[0]);
-  if (normalized.every((location) => normalizeLocationKey(location) === firstKey)) {
+  if (
+    normalized.every((location) => normalizeLocationKey(location) === firstKey)
+  ) {
     return normalized[0];
   }
 

@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@google/genai": "^1.44.0",
@@ -29,6 +32,7 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^9.28.0",
     "eslint-config-next": "^15.3.3",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3"
   }

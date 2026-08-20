@@ -5,7 +5,9 @@ export interface ValidationErrorItem {
   message: string;
 }
 
-export function formatValidationErrorItem(error: ErrorObject): ValidationErrorItem {
+export function formatValidationErrorItem(
+  error: ErrorObject,
+): ValidationErrorItem {
   const basePath = error.instancePath
     ? error.instancePath.replace(/^\//, "").replace(/\//g, ".")
     : "";
@@ -18,7 +20,10 @@ export function formatValidationErrorItem(error: ErrorObject): ValidationErrorIt
     };
   }
 
-  if (error.keyword === "additionalProperties" && error.params?.additionalProperty) {
+  if (
+    error.keyword === "additionalProperties" &&
+    error.params?.additionalProperty
+  ) {
     const extra = String(error.params.additionalProperty);
     return {
       path: basePath || "(root)",
@@ -68,7 +73,9 @@ export function dedupeValidationErrors(
   );
 
   for (const item of items) {
-    const extended = item as ValidationErrorItem & { _skipIfSpecific?: boolean };
+    const extended = item as ValidationErrorItem & {
+      _skipIfSpecific?: boolean;
+    };
     if (hasSpecific && extended._skipIfSpecific) continue;
 
     const key = `${item.path}::${item.message}`;

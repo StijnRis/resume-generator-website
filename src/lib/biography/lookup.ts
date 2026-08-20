@@ -155,10 +155,7 @@ export function getAttributeDisplayName(
   }
 }
 
-export function getAttributeRowLabel(
-  item: unknown,
-  category?: string,
-): string {
+export function getAttributeRowLabel(item: unknown, category?: string): string {
   const type =
     category ||
     (item && typeof item === "object"

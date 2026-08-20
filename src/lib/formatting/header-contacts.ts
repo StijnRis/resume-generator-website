@@ -1,4 +1,11 @@
-import type { Basics, Biography, ContactDetail, ContactKind, Location, Profile } from "@/lib/types";
+import type {
+  Basics,
+  Biography,
+  ContactDetail,
+  ContactKind,
+  Location,
+  Profile,
+} from "@/lib/types";
 import { formatLocationObject } from "@/lib/formatting/location";
 import {
   formatContactValueIfPhone,
@@ -25,7 +32,9 @@ function findProfile(
 ): Profile | undefined {
   if (!Array.isArray(profiles)) return undefined;
   return profiles.find((profile) =>
-    String(profile.network ?? "").toLowerCase().includes(networkMatch),
+    String(profile.network ?? "")
+      .toLowerCase()
+      .includes(networkMatch),
   );
 }
 
@@ -92,7 +101,10 @@ function upsertProfile(
   const next: Profile = { network, username, url };
   const key = network.toLowerCase();
   const without = profiles.filter(
-    (profile) => !String(profile.network ?? "").toLowerCase().includes(key),
+    (profile) =>
+      !String(profile.network ?? "")
+        .toLowerCase()
+        .includes(key),
   );
   return [...without, next];
 }
@@ -209,12 +221,14 @@ export function ensureReservedContacts(
  */
 export function applyContactSettings(
   biography: Biography,
-  contacts: ContactDetail[] | {
-    email?: string;
-    phone?: string;
-    linkedin?: string;
-    github?: string;
-  },
+  contacts:
+    | ContactDetail[]
+    | {
+        email?: string;
+        phone?: string;
+        linkedin?: string;
+        github?: string;
+      },
 ): Biography {
   // Legacy shape support (tests / older callers).
   if (!Array.isArray(contacts)) {

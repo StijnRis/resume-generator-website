@@ -13,7 +13,10 @@ import {
   getExperienceItemById,
   getExperienceOrganization,
 } from "@/lib/biography/lookup";
-import { formatLocationObject, formatLocationString } from "@/lib/formatting/location";
+import {
+  formatLocationObject,
+  formatLocationString,
+} from "@/lib/formatting/location";
 import {
   applyMapToUiLabels,
   DEFAULT_UI_LABELS,
