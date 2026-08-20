@@ -1,4 +1,8 @@
-import { getAttributeById, getAttributes, getExperiences } from "@/lib/biography/flat";
+import {
+  getAttributeById,
+  getAttributes,
+  getExperiences,
+} from "@/lib/biography/flat";
 import { getAttributeDisplayName } from "@/lib/biography/lookup";
 import type { Biography, HighLevelAnalysis } from "@/lib/types";
 

@@ -1,6 +1,6 @@
-# CV Generator
+# Resume Generator
 
-Generate personalised CVs with AI based on your biography and a job description.
+Generate personalised resumes with AI based on your biography and a job description.
 
 ## Setup
 
@@ -12,6 +12,16 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+Need sample input? Upload [`public/sample-biography.json`](public/sample-biography.json) to try the app.
+
+## Scripts
+
+- `pnpm dev` — start the dev server
+- `pnpm build` — production build
+- `pnpm lint` — run ESLint
+- `pnpm typecheck` — run the TypeScript compiler with no emit
+- `pnpm format` / `pnpm format:check` — apply / verify Prettier formatting
 
 ## Features
 

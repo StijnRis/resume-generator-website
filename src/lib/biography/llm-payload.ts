@@ -2,10 +2,7 @@ import {
   getAttributeDisplayName,
   getExperienceDisplayName,
 } from "@/lib/biography/lookup";
-import {
-  getAttributes,
-  getExperiences,
-} from "@/lib/biography/flat";
+import { getAttributes, getExperiences } from "@/lib/biography/flat";
 import type { Biography } from "@/lib/types";
 
 /** Strip internal fields for LLM requests — flat experiences/attributes. */

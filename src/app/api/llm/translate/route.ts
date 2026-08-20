@@ -66,10 +66,9 @@ export async function POST(request: Request) {
     });
 
     const parsed = extractJsonFromResponse(llmResponse.content);
-    const validation = validateWithSchema<{ translations: TranslationMapping[] }>(
-      "translate",
-      parsed,
-    );
+    const validation = validateWithSchema<{
+      translations: TranslationMapping[];
+    }>("translate", parsed);
 
     // Soft-validate: if schema file missing, accept parsed shape.
     const translations =

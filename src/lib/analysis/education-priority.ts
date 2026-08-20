@@ -1,8 +1,5 @@
 import { getExperienceById, getExperiences } from "@/lib/biography/flat";
-import {
-  isOngoingExperience,
-  parseDateForSort,
-} from "@/lib/formatting/dates";
+import { isOngoingExperience, parseDateForSort } from "@/lib/formatting/dates";
 import type { Biography, HighLevelAnalysis } from "@/lib/types";
 
 const TWO_YEARS_MS = 2 * 365.25 * 24 * 60 * 60 * 1000;

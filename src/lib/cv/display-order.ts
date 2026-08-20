@@ -1,5 +1,8 @@
 import type { HighLevelAnalysis, RenderedCv } from "@/lib/types";
-import { getCategoryOrder, getExperienceCategoryDefs } from "@/lib/biography/lookup";
+import {
+  getCategoryOrder,
+  getExperienceCategoryDefs,
+} from "@/lib/biography/lookup";
 import {
   CATEGORY_HEADER_LINES,
   estimateAttributeLines,

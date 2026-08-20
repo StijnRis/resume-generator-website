@@ -85,9 +85,21 @@
     }
   ],
   "skills": [
-    { "name": "JavaScript/TypeScript", "level": "Expert", "keywords": ["React", "Node.js", "Next.js"] },
-    { "name": "Cloud & DevOps", "level": "Advanced", "keywords": ["AWS", "Docker", "Kubernetes", "CI/CD"] },
-    { "name": "Databases", "level": "Advanced", "keywords": ["PostgreSQL", "Redis", "MongoDB"] }
+    {
+      "name": "JavaScript/TypeScript",
+      "level": "Expert",
+      "keywords": ["React", "Node.js", "Next.js"]
+    },
+    {
+      "name": "Cloud & DevOps",
+      "level": "Advanced",
+      "keywords": ["AWS", "Docker", "Kubernetes", "CI/CD"]
+    },
+    {
+      "name": "Databases",
+      "level": "Advanced",
+      "keywords": ["PostgreSQL", "Redis", "MongoDB"]
+    }
   ],
   "languages": [
     { "language": "English", "fluency": "fluent" },
@@ -102,7 +114,10 @@
       "roles": ["Creator", "Maintainer"],
       "type": "Open Source",
       "summary": "Developer productivity CLI with 2k+ GitHub stars.",
-      "highlights": ["Built in Rust for performance", "Active community of 50+ contributors"],
+      "highlights": [
+        "Built in Rust for performance",
+        "Active community of 50+ contributors"
+      ],
       "skills": ["Rust", "CLI"]
     }
   ],

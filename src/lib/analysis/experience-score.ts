@@ -157,9 +157,7 @@ export function normalizeAnalysis(
           bullets: assignBulletIds(group.bullets, id),
         };
       })
-      .filter(
-        (group): group is NonNullable<typeof group> => group != null,
-      ),
+      .filter((group): group is NonNullable<typeof group> => group != null),
     attribute_merges: analysis.attribute_merges ?? [],
     experience_analysis: analysis.experience_analysis.map((item) => {
       let importance = item.relevance_score;
@@ -209,10 +207,7 @@ export function normalizeAnalysis(
       return {
         ...item,
         category: remapCategory(String(item.category), categoryRemap),
-        relevance_score: Math.min(
-          MAX_IMPORTANCE,
-          Math.max(0, importance ?? 0),
-        ),
+        relevance_score: Math.min(MAX_IMPORTANCE, Math.max(0, importance ?? 0)),
         bullets,
       };
     }),

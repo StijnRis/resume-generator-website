@@ -104,9 +104,7 @@ function buildBlockList(cv: RenderedCv): CvPageBlock[] {
       order: cv.categoryOrders?.[category] ?? 99,
       blocks: [
         { type: "category", label, categoryKey: category },
-        ...entries.map(
-          (entry): CvPageBlock => ({ type: "experience", entry }),
-        ),
+        ...entries.map((entry): CvPageBlock => ({ type: "experience", entry })),
       ],
     });
   }
@@ -243,7 +241,8 @@ function packBlocksIntoPages(
       const pairedHeight =
         next &&
         ((block.type === "category" && next.type === "experience") ||
-          (block.type === "attributes-heading" && next.type === "attribute-row"))
+          (block.type === "attributes-heading" &&
+            next.type === "attribute-row"))
           ? heightOf(next)
           : 0;
 
@@ -292,111 +291,111 @@ export function fitCvByMeasurement(
 
   const session = createMeasureSession(isPlaceholder);
   try {
-  const summaryImportance = Math.min(
-    100,
-    Math.max(
-      0,
-      Math.round(
-        draft.summaryImportance ?? analysis.summary_importance ?? 70,
+    const summaryImportance = Math.min(
+      100,
+      Math.max(
+        0,
+        Math.round(
+          draft.summaryImportance ?? analysis.summary_importance ?? 70,
+        ),
       ),
-    ),
-  );
-  const summaryText = summaryImportance > 0 ? draft.summary : "";
-
-  const packedAttributes = draft.attributeSections
-    .map((section) => ({
-      ...section,
-      items: packAttributeItemsToOneLine(
-        session,
-        section.category,
-        section.items,
-      ),
-      relevanceScore: section.relevanceScore ?? 0,
-    }))
-    .filter(
-      (section) =>
-        section.items.length > 0 && (section.relevanceScore ?? 0) > 0,
     );
+    const summaryText = summaryImportance > 0 ? draft.summary : "";
 
-  type FillPiece =
-    | { type: "summary"; importance: number }
-    | { type: "experience"; id: string; importance: number }
-    | {
-        type: "bullet";
-        experienceId: string;
-        bulletId: string;
-        importance: number;
-      }
-    | { type: "attribute"; id: string; importance: number };
+    const packedAttributes = draft.attributeSections
+      .map((section) => ({
+        ...section,
+        items: packAttributeItemsToOneLine(
+          session,
+          section.category,
+          section.items,
+        ),
+        relevanceScore: section.relevanceScore ?? 0,
+      }))
+      .filter(
+        (section) =>
+          section.items.length > 0 && (section.relevanceScore ?? 0) > 0,
+      );
 
-  const pieces: FillPiece[] = [];
-  if (summaryText && summaryImportance > 0) {
-    pieces.push({ type: "summary", importance: summaryImportance });
-  }
-  for (const experience of draft.experiences) {
-    if (experience.relevanceScore <= 0) continue;
-    pieces.push({
-      type: "experience",
-      id: experience.id,
-      importance: experience.relevanceScore,
-    });
-    for (const bullet of experience.bulletPoints) {
-      if (bullet.importance <= 0) continue;
+    type FillPiece =
+      | { type: "summary"; importance: number }
+      | { type: "experience"; id: string; importance: number }
+      | {
+          type: "bullet";
+          experienceId: string;
+          bulletId: string;
+          importance: number;
+        }
+      | { type: "attribute"; id: string; importance: number };
+
+    const pieces: FillPiece[] = [];
+    if (summaryText && summaryImportance > 0) {
+      pieces.push({ type: "summary", importance: summaryImportance });
+    }
+    for (const experience of draft.experiences) {
+      if (experience.relevanceScore <= 0) continue;
       pieces.push({
-        type: "bullet",
-        experienceId: experience.id,
-        bulletId: bullet.id,
-        importance: bullet.importance,
+        type: "experience",
+        id: experience.id,
+        importance: experience.relevanceScore,
+      });
+      for (const bullet of experience.bulletPoints) {
+        if (bullet.importance <= 0) continue;
+        pieces.push({
+          type: "bullet",
+          experienceId: experience.id,
+          bulletId: bullet.id,
+          importance: bullet.importance,
+        });
+      }
+    }
+    for (const section of packedAttributes) {
+      pieces.push({
+        type: "attribute",
+        id: section.id,
+        importance: section.relevanceScore ?? 0,
       });
     }
-  }
-  for (const section of packedAttributes) {
-    pieces.push({
-      type: "attribute",
-      id: section.id,
-      importance: section.relevanceScore ?? 0,
+
+    pieces.sort((a, b) => {
+      if (b.importance !== a.importance) return b.importance - a.importance;
+      const rank = { experience: 0, bullet: 1, summary: 2, attribute: 3 };
+      return rank[a.type] - rank[b.type];
     });
-  }
 
-  pieces.sort((a, b) => {
-    if (b.importance !== a.importance) return b.importance - a.importance;
-    const rank = { experience: 0, bullet: 1, summary: 2, attribute: 3 };
-    return rank[a.type] - rank[b.type];
-  });
-
-  const fits = (
-    experiences: CvExperienceEntry[],
-    attributeSections: RenderedCv["attributeSections"],
-    summary: string,
-  ): boolean => {
-    const candidate: RenderedCv = {
-      ...draft,
-      summary,
-      summaryImportance,
-      experiences: orderExperiencesForDisplay(experiences, analysis),
-      attributeSections,
+    const fits = (
+      experiences: CvExperienceEntry[],
+      attributeSections: RenderedCv["attributeSections"],
+      summary: string,
+    ): boolean => {
+      const candidate: RenderedCv = {
+        ...draft,
+        summary,
+        summaryImportance,
+        experiences: orderExperiencesForDisplay(experiences, analysis),
+        attributeSections,
+      };
+      return (
+        packBlocksIntoPages(session, candidate, buildBlockList(candidate))
+          .length <= pageCount
+      );
     };
-    return (
-      packBlocksIntoPages(session, candidate, buildBlockList(candidate))
-        .length <= pageCount
-    );
-  };
 
-  const upsertExperience = (
-    list: CvExperienceEntry[],
-    source: CvExperienceEntry,
-    bullets: CvBulletPoint[],
-  ): CvExperienceEntry[] => {
-    const next: CvExperienceEntry = {
-      ...source,
-      bulletPoints: [...bullets].sort((a, b) => b.importance - a.importance),
-      requestedBulletCount:
-        source.requestedBulletCount ?? source.bulletPoints.length,
+    const upsertExperience = (
+      list: CvExperienceEntry[],
+      source: CvExperienceEntry,
+      bullets: CvBulletPoint[],
+    ): CvExperienceEntry[] => {
+      const next: CvExperienceEntry = {
+        ...source,
+        bulletPoints: [...bullets].sort((a, b) => b.importance - a.importance),
+        requestedBulletCount:
+          source.requestedBulletCount ?? source.bulletPoints.length,
+      };
+      const index = list.findIndex((entry) => entry.id === source.id);
+      if (index < 0) return [...list, next];
+      return list.map((entry, i) => (i === index ? next : entry));
     };
-    const index = list.findIndex((entry) => entry.id === source.id);
-    if (index < 0) return [...list, next];
-    return list.map((entry, i) => (i === index ? next : entry));
-  };
 
     let summary = "";
     let experiences: CvExperienceEntry[] = [];
@@ -437,9 +436,7 @@ export function fitCvByMeasurement(
         if (attributeSections.some((section) => section.id === piece.id)) {
           continue;
         }
-        const section = packedAttributes.find(
-          (entry) => entry.id === piece.id,
-        );
+        const section = packedAttributes.find((entry) => entry.id === piece.id);
         if (!section) continue;
         nextAttributes = [...attributeSections, section];
       }
@@ -500,10 +497,7 @@ function packAttributeItemsToOneLine(
   return accepted;
 }
 
-export function paginateCv(
-  cv: RenderedCv,
-  isPlaceholder: boolean,
-): CvPage[] {
+export function paginateCv(cv: RenderedCv, isPlaceholder: boolean): CvPage[] {
   if (typeof document === "undefined") {
     return [{ blocks: buildBlockList(cv) }];
   }
@@ -536,7 +530,12 @@ export function renderBlock(
 ): ReactNode {
   switch (block.type) {
     case "header":
-      return <CvHeader cv={cv} onClick={onItemClick ? () => onItemClick("header") : undefined} />;
+      return (
+        <CvHeader
+          cv={cv}
+          onClick={onItemClick ? () => onItemClick("header") : undefined}
+        />
+      );
     case "summary":
       return (
         <CvSummary
@@ -564,9 +563,7 @@ export function renderBlock(
           entry={block.entry}
           isPlaceholder={isPlaceholder}
           atLabel={cv.uiLabels?.at ?? "at"}
-          onClick={
-            onItemClick ? () => onItemClick(block.entry.id) : undefined
-          }
+          onClick={onItemClick ? () => onItemClick(block.entry.id) : undefined}
         />
       );
     case "attributes-heading":
@@ -646,13 +643,7 @@ export function renderBlock(
   }
 }
 
-function CvHeader({
-  cv,
-  onClick,
-}: {
-  cv: RenderedCv;
-  onClick?: () => void;
-}) {
+function CvHeader({ cv, onClick }: { cv: RenderedCv; onClick?: () => void }) {
   const contacts = getHeaderContactLine(cv.basics);
 
   return (
@@ -906,8 +897,4 @@ const sectionHeadingStyle: CSSProperties = {
   margin: "0 0 8px",
 };
 
-export {
-  CV_PAGE_HEIGHT_MM,
-  CV_PAGE_PADDING_MM,
-  CV_PAGE_WIDTH_MM,
-};
+export { CV_PAGE_HEIGHT_MM, CV_PAGE_PADDING_MM, CV_PAGE_WIDTH_MM };

@@ -14,16 +14,46 @@
       "type": "array",
       "items": { "$ref": "#/definitions/FlatAttribute" }
     },
-    "work": { "type": "array", "items": { "$ref": "#/definitions/WorkExperience" } },
-    "education": { "type": "array", "items": { "$ref": "#/definitions/EducationExperience" } },
-    "volunteer": { "type": "array", "items": { "$ref": "#/definitions/VolunteerExperience" } },
-    "experience": { "type": "array", "items": { "$ref": "#/definitions/GenericExperience" } },
-    "extracurriculars": { "type": "array", "items": { "$ref": "#/definitions/GenericExperience" } },
-    "events": { "type": "array", "items": { "$ref": "#/definitions/EventItem" } },
-    "research": { "type": "array", "items": { "$ref": "#/definitions/ResearchExperience" } },
-    "projects": { "type": "array", "items": { "$ref": "#/definitions/ProjectExperience" } },
-    "awards": { "type": "array", "items": { "$ref": "#/definitions/AwardItem" } },
-    "certificates": { "type": "array", "items": { "$ref": "#/definitions/CertificateItem" } },
+    "work": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/WorkExperience" }
+    },
+    "education": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/EducationExperience" }
+    },
+    "volunteer": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/VolunteerExperience" }
+    },
+    "experience": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/GenericExperience" }
+    },
+    "extracurriculars": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/GenericExperience" }
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/EventItem" }
+    },
+    "research": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ResearchExperience" }
+    },
+    "projects": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ProjectExperience" }
+    },
+    "awards": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/AwardItem" }
+    },
+    "certificates": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/CertificateItem" }
+    },
     "skills": { "type": "array", "items": { "$ref": "#/definitions/Skill" } },
     "tools": {
       "type": "array",
@@ -37,12 +67,27 @@
         "additionalProperties": true
       }
     },
-    "languages": { "type": "array", "items": { "$ref": "#/definitions/LanguageItem" } },
-    "sports": { "type": "array", "items": { "$ref": "#/definitions/SportItem" } },
+    "languages": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/LanguageItem" }
+    },
+    "sports": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/SportItem" }
+    },
     "interests": { "type": "array", "items": { "type": "string" } },
-    "publications": { "type": "array", "items": { "$ref": "#/definitions/PublicationItem" } },
-    "references": { "type": "array", "items": { "$ref": "#/definitions/ReferenceItem" } },
-    "star_stories": { "type": "array", "items": { "$ref": "#/definitions/StarStory" } },
+    "publications": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/PublicationItem" }
+    },
+    "references": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ReferenceItem" }
+    },
+    "star_stories": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/StarStory" }
+    },
     "competenties": { "$ref": "#/definitions/Competenties" }
   },
   "required": ["basics", "label", "summary"],
@@ -147,7 +192,10 @@
         "image": { "type": "string" },
         "phone": { "type": "string" },
         "location": { "$ref": "#/definitions/Location" },
-        "profiles": { "type": "array", "items": { "$ref": "#/definitions/Profile" } }
+        "profiles": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Profile" }
+        }
       },
       "required": ["name", "location", "profiles"],
       "additionalProperties": false
@@ -178,8 +226,14 @@
         "highlights": { "type": "array", "items": { "type": "string" } },
         "skills": { "type": "array", "items": { "type": "string" } },
         "tools": { "type": "array", "items": { "type": "string" } },
-        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } },
-        "positions": { "type": "array", "items": { "$ref": "#/definitions/WorkPosition" } }
+        "contacts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Contact" }
+        },
+        "positions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/WorkPosition" }
+        }
       },
       "required": ["organization", "position", "start_date"],
       "additionalProperties": false
@@ -243,7 +297,10 @@
         "highlights": { "type": "array", "items": { "type": "string" } },
         "skills": { "type": "array", "items": { "type": "string" } },
         "tools": { "type": "array", "items": { "type": "string" } },
-        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } }
+        "contacts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Contact" }
+        }
       },
       "required": ["organization", "role"],
       "additionalProperties": false
@@ -262,7 +319,10 @@
         "highlights": { "type": "array", "items": { "type": "string" } },
         "skills": { "type": "array", "items": { "type": "string" } },
         "tools": { "type": "array", "items": { "type": "string" } },
-        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } }
+        "contacts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Contact" }
+        }
       },
       "required": ["title", "organization"],
       "additionalProperties": false
@@ -282,7 +342,10 @@
         "highlights": { "type": "array", "items": { "type": "string" } },
         "skills": { "type": "array", "items": { "type": "string" } },
         "tools": { "type": "array", "items": { "type": "string" } },
-        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } }
+        "contacts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Contact" }
+        }
       },
       "required": ["title"],
       "additionalProperties": false
@@ -312,7 +375,10 @@
         "tools": { "type": "array", "items": { "type": "string" } },
         "roles": { "type": "array", "items": { "type": "string" } },
         "type": { "type": ["string", "null"] },
-        "STAR": { "type": "array", "items": { "$ref": "#/definitions/ProjectSTAR" } }
+        "STAR": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ProjectSTAR" }
+        }
       },
       "required": ["title"],
       "additionalProperties": false
@@ -333,7 +399,10 @@
         "skills": { "type": "array", "items": { "type": "string" } },
         "tools": { "type": "array", "items": { "type": "string" } },
         "urls": { "type": "array", "items": { "type": "string" } },
-        "contacts": { "type": "array", "items": { "$ref": "#/definitions/Contact" } }
+        "contacts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Contact" }
+        }
       },
       "required": ["title", "organization", "start_date"],
       "additionalProperties": false
@@ -436,7 +505,14 @@
         "action": { "type": "string" },
         "result": { "type": "string" }
       },
-      "required": ["date", "competencies", "situation", "task", "action", "result"],
+      "required": [
+        "date",
+        "competencies",
+        "situation",
+        "task",
+        "action",
+        "result"
+      ],
       "additionalProperties": false
     },
     "CompetencyItem": {
@@ -453,8 +529,14 @@
     "Competenties": {
       "type": "object",
       "properties": {
-        "strenghts": { "type": "array", "items": { "$ref": "#/definitions/CompetencyItem" } },
-        "growth_areas": { "type": "array", "items": { "$ref": "#/definitions/CompetencyItem" } }
+        "strenghts": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CompetencyItem" }
+        },
+        "growth_areas": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CompetencyItem" }
+        }
       },
       "required": ["strenghts", "growth_areas"],
       "additionalProperties": false

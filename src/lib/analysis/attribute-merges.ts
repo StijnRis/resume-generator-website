@@ -46,7 +46,9 @@ export function getAttributeMergeGroupsForCategory(
     const members = group.member_ids
       .map((id) => analysis.attribute_analysis.find((item) => item.id === id))
       .filter((item): item is AttributeAnalysisItem => item != null);
-    return members.length > 0 && members.every((item) => item.category === category);
+    return (
+      members.length > 0 && members.every((item) => item.category === category)
+    );
   });
 }
 
@@ -376,7 +378,10 @@ function relocateStandaloneSoftSkills(
     if (!isSkillOrToolAttribute(biography, item)) return false;
     if (item.relevance_score <= 0) return false;
     if (isSoftSkillsCategory(item.category)) return false;
-    if (!isTechnicalSkillsCategory(item.category) && item.category !== "skills") {
+    if (
+      !isTechnicalSkillsCategory(item.category) &&
+      item.category !== "skills"
+    ) {
       return false;
     }
     const name = normalizeAttributeName(
@@ -602,9 +607,7 @@ export function suggestAttributeMergeGroups(
   }
 
   for (const members of buckets.values()) {
-    const ids = members
-      .map((item) => item.id)
-      .filter((id) => !used.has(id));
+    const ids = members.map((item) => item.id).filter((id) => !used.has(id));
     if (ids.length < 2) continue;
     suggestions.push(ids);
     for (const id of ids) used.add(id);

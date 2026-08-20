@@ -19,7 +19,11 @@ const ROUTE = "POST /api/llm/analyze";
 
 export async function POST(request: Request) {
   try {
-    const { jobDescription, biography, pageCount = 2 } = (await request.json()) as {
+    const {
+      jobDescription,
+      biography,
+      pageCount = 2,
+    } = (await request.json()) as {
       jobDescription: string;
       biography: Biography;
       pageCount?: number;
@@ -66,7 +70,10 @@ export async function POST(request: Request) {
     });
 
     const parsed = extractJsonFromResponse(llmResponse.content);
-    const validation = validateWithSchema<HighLevelAnalysis>("relevance", parsed);
+    const validation = validateWithSchema<HighLevelAnalysis>(
+      "relevance",
+      parsed,
+    );
 
     if (!validation.valid) {
       console.error(`[API ${ROUTE}] Invalid LLM analysis:`, {
