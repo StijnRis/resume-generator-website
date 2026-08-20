@@ -4,6 +4,7 @@ import {
   getExperiences,
 } from "@/lib/biography/flat";
 import { getAttributeDisplayName } from "@/lib/biography/lookup";
+import { splitMixedAttributeCategories } from "@/lib/analysis/attribute-merges";
 import type { Biography, HighLevelAnalysis } from "@/lib/types";
 
 const DISTINCT_INTEREST_FLOOR = 58;
@@ -106,7 +107,10 @@ export function applyInterestPriority(
   });
 
   if (distinctIds.size === 0) {
-    return { ...analysis, attribute_analysis };
+    return splitMixedAttributeCategories(biography, {
+      ...analysis,
+      attribute_analysis,
+    });
   }
 
   const hasCategory = analysis.attribute_categories.some((entry) =>
@@ -133,9 +137,9 @@ export function applyInterestPriority(
         },
       ];
 
-  return {
+  return splitMixedAttributeCategories(biography, {
     ...analysis,
     attribute_categories,
     attribute_analysis,
-  };
+  });
 }

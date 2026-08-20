@@ -14,14 +14,17 @@ import {
   addAttributeMergeGroup,
   getAttributeMergeGroups,
   getAttributeMergeLabel,
+  getAttributeMergeReason,
   getMemberIdsInAttributeMerges,
   removeAttributeMergeGroup,
   shouldIncludeAttributeCategory,
 } from "@/lib/analysis/attribute-merges";
 import {
   addMergeGroup,
+  describeMergeReason,
   getMemberIdsInMerges,
   getMergeGroupsForCategory,
+  getMergeReason,
   getSuggestedMergeLabel,
   removeMergeGroup,
   suggestMergeGroupsForCategory,
@@ -690,8 +693,11 @@ export function AnalysisSection({
   };
 
   const combineExperienceMembers = (category: string, memberIds: string[]) => {
-    if (!analysis) return;
-    const next = addMergeGroup(analysis, category, memberIds);
+    if (!analysis || !biography) return;
+    const next = addMergeGroup(analysis, category, memberIds, {
+      reason: describeMergeReason(biography, memberIds),
+      biography,
+    });
     const groups = next.experience_merges ?? [];
     const newGroup = groups[groups.length - 1];
     onAnalysisChange(next);
@@ -1074,6 +1080,7 @@ export function AnalysisSection({
                           analysis,
                           group.member_ids,
                         );
+                        const mergeReason = getMergeReason(biography, group);
                         const importance = getGroupImportance(group, members);
                         const theme = getMergeColorTheme(group.id);
                         const excludedDefault = importance <= 0;
@@ -1126,16 +1133,6 @@ export function AnalysisSection({
                                       {title}
                                     </p>
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleUnmergeExperience(group.id);
-                                    }}
-                                    className={`text-xs shrink-0 ${theme.button}`}
-                                  >
-                                    Unmerge
-                                  </button>
                                 </div>
 
                                 {!folded && (
@@ -1143,22 +1140,6 @@ export function AnalysisSection({
                                     className="space-y-2"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <ScoreSlider
-                                      min={0}
-                                      max={MAX_IMPORTANCE}
-                                      label="Importance"
-                                      value={importance}
-                                      valueLabel={formatImportanceSliderValue(
-                                        importance,
-                                      )}
-                                      onChange={(score) =>
-                                        onAnalysisChange(
-                                          updateMergeGroup(analysis, group.id, {
-                                            relevance_score: score,
-                                          }),
-                                        )
-                                      }
-                                    />
                                     <div className="space-y-1">
                                       {members.map((member) => (
                                         <p
@@ -1336,6 +1317,38 @@ export function AnalysisSection({
                                     </div>
                                   </div>
                                 )}
+                              </div>
+                              <div
+                                className="w-44 shrink-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ScoreSlider
+                                  side
+                                  min={0}
+                                  max={MAX_IMPORTANCE}
+                                  label="Importance"
+                                  value={importance}
+                                  valueLabel={formatImportanceSliderValue(
+                                    importance,
+                                  )}
+                                  reason={mergeReason}
+                                  onChange={(score) =>
+                                    onAnalysisChange(
+                                      updateMergeGroup(analysis, group.id, {
+                                        relevance_score: score,
+                                      }),
+                                    )
+                                  }
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleUnmergeExperience(group.id)
+                                  }
+                                  className={`mt-1 text-xs ${theme.button}`}
+                                >
+                                  Unmerge
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -1626,6 +1639,11 @@ export function AnalysisSection({
                     .filter(
                       (entry): entry is AttributeAnalysisItem => entry != null,
                     );
+                  const mergeReason = getAttributeMergeReason(
+                    biography,
+                    analysis,
+                    group,
+                  );
 
                   return (
                     <div
@@ -1694,18 +1712,25 @@ export function AnalysisSection({
                               </pre>
                             )}
                         </div>
-                        <button
-                          type="button"
-                          className="text-[10px] text-violet-700 hover:underline shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAnalysisChange(
-                              removeAttributeMergeGroup(analysis, group.id),
-                            );
-                          }}
+                        <div
+                          className="w-44 shrink-0"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          Unmerge
-                        </button>
+                          <p className="text-xs text-zinc-500 leading-snug whitespace-pre-wrap">
+                            {mergeReason}
+                          </p>
+                          <button
+                            type="button"
+                            className="text-[10px] text-violet-700 hover:underline mt-1"
+                            onClick={() =>
+                              onAnalysisChange(
+                                removeAttributeMergeGroup(analysis, group.id),
+                              )
+                            }
+                          >
+                            Unmerge
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

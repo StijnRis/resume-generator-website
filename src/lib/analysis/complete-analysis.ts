@@ -1,5 +1,6 @@
 import { getAttributes, getExperiences } from "@/lib/biography/flat";
 import { applySkillListRules } from "@/lib/analysis/attribute-merges";
+import { applyExperienceSubsetMerges } from "@/lib/analysis/merges";
 import type {
   AttributeAnalysisItem,
   Biography,
@@ -107,11 +108,14 @@ export function completeAnalysis(
     attribute_analysis.map((item) => item.category),
   );
 
-  return applySkillListRules(biography, {
-    ...analysis,
-    experience_categories,
-    attribute_categories,
-    experience_analysis,
-    attribute_analysis,
-  });
+  return applyExperienceSubsetMerges(
+    biography,
+    applySkillListRules(biography, {
+      ...analysis,
+      experience_categories,
+      attribute_categories,
+      experience_analysis,
+      attribute_analysis,
+    }),
+  );
 }

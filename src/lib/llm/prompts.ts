@@ -16,13 +16,14 @@ export const ANALYSIS_PROMPT = `You are a professional resume strategist. Analyz
 CRITICAL STRUCTURE:
 1) First define the resume section categories you will use. Categories have a label (the heading shown on the resume) — there is no separate id. Refer to a category by that exact label everywhere else.
 2) Then score every experience and attribute and assign each to one of those labels.
-3) Then merge similar experiences into combined CV entries.
+3) Honor code_merges from the user payload (already combined because one item is a subset of another). Then you may add a few further merges of remaining similar experiences.
 
 Rules:
 - Return JSON matching the provided response schema exactly.
 - Root object fields: experience_categories, attribute_categories, experience_analysis, attribute_analysis, experience_merges, summary_importance.
 - experience_categories: array of { label, order, reason }. label is the resume heading (e.g. "Work Experience", "Education", "Hackathons"). order is section order (1 = first). Do NOT invent a separate id.
-- attribute_categories: same shape. Use specific labels such as "Technical Skills", "Soft Skills", "Languages", "Awards". Attribute sections always appear after experiences; their order is independent.
+- attribute_categories: same shape. Use specific single-focus labels such as "Technical Skills", "Soft Skills", "Languages", "Awards", "Interests". Attribute sections always appear after experiences; their order is independent.
+- Each attribute category MUST cover exactly one kind of content. Never combine different kinds in one label — not "Awards & Interests", "Skills & Languages", "Certificates / Publications", or similar. If both awards and interests belong on the resume, make two categories.
 - Split skills when both exist: concrete tools/languages/methods go in "Technical Skills"; interpersonal traits go in "Soft Skills". Never dump soft skills into a technical row.
 - Put Education first among experience categories when the candidate is a student, recent graduate (~1–2 years), or career-changing into a degree-relevant field.
 - Use the exact experience/attribute "id" from required_*_ids / biography — do NOT invent item IDs.
@@ -47,11 +48,17 @@ Rules:
 - Never invent skill proficiency levels (e.g. "Proficient") — only use levels present in the biography.
 - Be concise but specific in reasons — reference job requirements.
 
+CODE MERGES (user payload field code_merges):
+- These groups were already identified in code because one experience is a subset of another, or they are duplicates.
+- You MUST include each code_merges group as an experience_merges entry with the SAME member_ids. Do not add extra members to a code merge.
+- Reuse or refine the provided reason so it stays informative (name the subset relationship).
+- Write 3–5 combined bullet topics for the merged story. Do NOT copy every member highlight as its own bullet.
+
 EXPERIENCE MERGES (required field experience_merges):
-- Merge aggressively. Similar items should become ONE resume entry instead of many short ones.
-- Always consider merging: hackathons/competitions; repeat teaching, tutoring, mentoring, or student-assistant roles; multiple jobs at the same employer; sports; similar research or class projects; repeated pre-university or extracurricular programs.
-- Each merge: { member_ids (2+ experience ids), category (exact experience_categories.label), relevance_score (highest of the members), reason, bullets (at least 3 topics covering the combined story) }.
-- Put members in the same category before merging. Do not leave obvious clusters unmerged.
+- After honoring code_merges, you may merge remaining items that tell one story (repeat role at one employer, the same event series). Keep groups small (typically 2–4 members).
+- Do not dump large unrelated lists into one entry (not every hackathon, sport, or internship).
+- Each merge: { member_ids (2+ experience ids), category (exact experience_categories.label), relevance_score (highest of the members), reason (why they were combined), bullets (3–5 topics covering the combined story, not one topic per member highlight) }.
+- Put members in the same category before merging.
 - Items that stay standalone still need their own 3+ bullets. Merged members are still listed individually in experience_analysis (with their own scores/bullets); the merge only combines them on the CV.`;
 
 export const BATCH_CV_GENERATION_PROMPT = `You are a professional resume writer. Generate tailored resume text for a candidate based on the job description.
@@ -71,7 +78,7 @@ Rules:
 - Never repeat a fact already in the title, organization, location, or dates. Each fact appears once. If a bullet topic restates the title (e.g. GPA already in the education title), write a different source-backed fact instead — do not mention GPA again.
 - For education: include GPA (grade/grade_scale) in the title when present. Never invent GPA.
 - If data.skills / data.tools (tech stack) is present and relevant to the job, mention the relevant technologies (typically in one bullet). Do not dump unrelated tools.
-- Merged entries (is_merged): combined title/org/location rules as before; bullets still follow bullets_to_write.
+- Merged entries (is_merged): combined title/org/location rules as before; bullets still follow bullets_to_write. Use merge_reason to understand why items were combined — still write only the provided bullets, never one bullet per member highlight.
 - Titles: Title Case. Keep meaningful punctuation such as / , & and - (e.g. "BSc Computer Science / AI"). Avoid trailing periods and quotation marks. Research titles = topic/goal, never "Research Assistant". Do not append part-time to titles — the layout adds "(Part-time)" when needed.
 - Experience bullets: include a quantifiable number, metric, or scale in almost every bullet when the source supports it (people, %, time, money, volume, rank, class size, frequency). If the source has no number, use an honest qualitative scope. Never hallucinate numbers.
 - Start each bullet with a strong action verb. Use a different opening verb for every bullet in the same experience, and avoid repeating the same verb across the resume when another accurate verb exists. ~100 characters max. XYZ-quality.

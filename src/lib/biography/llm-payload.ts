@@ -1,3 +1,4 @@
+import { detectExperienceSubsetMerges } from "@/lib/analysis/merges";
 import {
   getAttributeDisplayName,
   getExperienceDisplayName,
@@ -62,12 +63,19 @@ export function buildAnalyzeUserPayload(
   biography: Biography,
   pageCount: number,
 ): Record<string, unknown> {
+  const codeMerges = detectExperienceSubsetMerges(biography).map((group) => ({
+    member_ids: group.member_ids,
+    reason: group.reason,
+    already_combined: true,
+  }));
+
   return {
     job_description: jobDescription,
     page_count: pageCount,
     biography: prepareBiographyForLlm(biography),
     required_experience_ids: listRequiredExperienceIds(biography),
     required_attribute_ids: listRequiredAttributeIds(biography),
+    code_merges: codeMerges,
   };
 }
 

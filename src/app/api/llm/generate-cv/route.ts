@@ -7,8 +7,8 @@ import {
 } from "@/lib/analysis/experience-score";
 import { mergeExperienceDataForLlm } from "@/lib/analysis/merge-experience-data";
 import {
-  applyAllSuggestedMerges,
   buildExperienceUnits,
+  getMergeReason,
   getUnitBullets,
   getUnitCvId,
   getUnitImportance,
@@ -74,9 +74,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalized = normalizeAnalysis(
-      applyAllSuggestedMerges(biography, analysis),
-    );
+    const normalized = normalizeAnalysis(analysis);
     const units = buildExperienceUnits(normalized)
       .filter(isUnitIncluded)
       .sort((a, b) => getUnitImportance(b) - getUnitImportance(a));
@@ -167,6 +165,7 @@ export async function POST(request: Request) {
           category: unit.items[0].category,
           importance: Math.max(...unit.items.map(getExperienceImportance)),
           is_merged: true,
+          merge_reason: getMergeReason(biography, unit.group),
           bullets_to_write: bulletsToWrite,
           tense,
           date_range: formatMergedDateRange(starts, ends),

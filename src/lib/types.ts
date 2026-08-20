@@ -189,6 +189,8 @@ export interface ExperienceMergeGroup {
   category?: string;
   member_ids: string[];
   relevance_score?: number;
+  /** Why these items were combined (shown beside the merged row). */
+  reason?: string;
   bullets?: ExperienceBulletCandidate[];
 }
 
@@ -197,6 +199,8 @@ export interface AttributeMergeGroup {
   category?: string;
   member_ids: string[];
   relevance_score?: number;
+  /** Why these items were combined (shown beside the merged row). */
+  reason?: string;
   /** Optional AI/user title for the merged attribute row. */
   title?: string;
 }
