@@ -154,6 +154,7 @@ export function normalizeAnalysis(
           member_ids: memberIds,
           category: remapCategory(String(group.category ?? ""), categoryRemap),
           relevance_score: clampBulletImportance(group.relevance_score ?? 0),
+          reason: String(group.reason ?? "").trim(),
           bullets: assignBulletIds(group.bullets, id),
         };
       })

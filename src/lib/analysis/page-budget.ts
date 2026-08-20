@@ -4,7 +4,6 @@ import {
   isExperienceIncluded,
 } from "@/lib/analysis/experience-score";
 import {
-  applyAllSuggestedMerges,
   buildExperienceUnits,
   isUnitIncluded,
 } from "@/lib/analysis/merges";
@@ -43,11 +42,11 @@ function targetIncludedUnits(pageCount: number): number {
  * Promote excluded experiences when the analysis would under-fill the page budget.
  */
 export function expandAnalysisForPageBudget(
-  biography: Biography,
+  _biography: Biography,
   analysis: HighLevelAnalysis,
   pageCount: number,
 ): HighLevelAnalysis {
-  let next = applyAllSuggestedMerges(biography, analysis);
+  let next = analysis;
   const target = targetIncludedUnits(pageCount);
 
   const countIncluded = () =>
